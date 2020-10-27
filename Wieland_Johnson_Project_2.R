@@ -19,13 +19,14 @@ library(plyr)
 library(shinysky)
 
 
-#Read in Data
-admissions <- read_tsv("AdmissionsCorePopulatedTable.txt", col_names = TRUE)
-diagnoses <- read_tsv("AdmissionsDiagnosesCorePopulatedTable.txt", col_names = TRUE)
-labs <- read_tsv("LabsCorePopulatedTable.txt", col_names = TRUE)
-corePopulated <- read_tsv("PatientCorePopulatedTable.txt", col_names = TRUE)
-patientData = list(corePopulated, admissions, diagnoses, labs)
-
+# #Read in Data
+# admissions <- read_tsv("AdmissionsCorePopulatedTable.txt", col_names = TRUE)
+# diagnoses <- read_tsv("AdmissionsDiagnosesCorePopulatedTable.txt", col_names = TRUE)
+# labs <- read_tsv("LabsCorePopulatedTable.txt", col_names = TRUE)
+# corePopulated <- read_tsv("PatientCorePopulatedTable.txt", col_names = TRUE)
+#patientData <- list(corePopulated, admissions, diagnoses, labs)
+patientData<-NULL
+#
 # ######################################################################################################
 # ############################# Statistical Analysis ###################################################
 # ######################################################################################################
@@ -83,14 +84,17 @@ ui <- fluidPage(navbarPage("VERITAS",
                                          selected = NULL,
                                          multiple = TRUE, #though only 1 input, necessary to prevent autofill
                                          options = list(maxItems = 1)),#caps to only 1 input, but does not autofill the box
+                          tableOutput('contents'),
+                          
                           ),
+                 
                  
                  tabPanel("Input Data",
                           h3("Upload Patient Data by Filetype"),
                           fileInput("admissions", "Admission Data", accept = ".txt"),
                           fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
                           fileInput("labs", "Lab Data", accept = ".txt"),
-                          fileInput("core_populated", "Core Populated Data", accept = ".txt"),
+                          fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
                           
                  ),
                  
@@ -98,7 +102,42 @@ ui <- fluidPage(navbarPage("VERITAS",
                  )
 )
 
-server <- function(input, output) { }
+server <- function(input, output, session) {
+  options(shiny.maxRequestSize=30*1024^2)
+    # req(admissions)
+    # validate(need(ext == ".txt", "Please upload a tsv file"))
+    # admissions <- read_tsv(input$admissions, col_names = TRUE)
+    # 
+    # req(diagnoses)
+    # validate(need(ext == ".txt", "Please upload a tsv file"))
+    # diagnoses <- read_tsv(input$diagnoses, col_names = TRUE)
+    # 
+    # req(labs)
+    # validate(need(ext == ".txt", "Please upload a tsv file"))
+    # labs <- read_tsv(input$labs, col_names = TRUE)
+    # 
+    # req(patients)
+    # validate(need(ext == ".txt", "Please upload a tsv file"))
+    # patients <- read_tsv(input$patients, col_names = TRUE)
+    # 
+    # patientData <- list(patients, admissions, diagnoses, labs)
+
+    output$contents <- renderTable({
+      
+      # input$file1 will be NULL initially. After the user selects and uploads a 
+      # file, it will be a data frame with 'name', 'size', 'type', and 'datapath' 
+      # columns. The 'datapath' column will contain the local filenames where the 
+      # data can be found.
+      patients <- input$patients
+
+      if (is.null(patients))
+        return(NULL)
+      
+      patients <- read_tsv(patients$datapath, col_names = TRUE)
+      updateSelectizeInput(session, 'patientID', choices = patients$PatientID, server = TRUE)
+      
+    })
+}
 
 shinyApp(ui = ui, server = server)
 
