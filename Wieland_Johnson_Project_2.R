@@ -1,5 +1,9 @@
 rm(list = ls())
 
+#Install ShinySky if not loaded
+devtools::install_github("AnalytixWare/ShinySky")
+
+#Load Libraries
 library(shiny)
 library(ggpubr)
 library(dplyr)
@@ -14,19 +18,19 @@ library(devtools)
 library(plyr)
 library(shinysky)
 
-admissions <- read_tsv("Data_AdmissionsCorePopulatedTable_10000.txt", col_names = TRUE)
-diagnoses <- read_tsv("Data_AdmissionsDiagnosesCorePopulatedTable_10000.txt", col_names = TRUE)
-labs <- read_tsv("Data_LabsCorePopulatedTable_10000.txt", col_names = TRUE)
-corePopulated <- read_tsv("Data_PatientCorePopulatedTable_10000.txt", col_names = TRUE)
+
+#Read in Data
+admissions <- read_tsv("AdmissionsCorePopulatedTable.txt", col_names = TRUE)
+diagnoses <- read_tsv("AdmissionsDiagnosesCorePopulatedTable.txt", col_names = TRUE)
+labs <- read_tsv("LabsCorePopulatedTable.txt", col_names = TRUE)
+corePopulated <- read_tsv("PatientCorePopulatedTable.txt", col_names = TRUE)
 patientData = list(corePopulated, admissions, diagnoses, labs)
 
-test_function <- function(x) {
-  y <- x + 5
-  return(y)
-}
+######################################################################################################
+############################# Statistical Analysis ###################################################
+######################################################################################################
 
-
-
+#T Test
 analyses_t_test <- function(compareVariable, group1, group2) {
   group1PatientID <- as.data.frame(subset(patientData[[4]], patientData[[4]]$PatientGender == group1))
   group1PatientIDtest <- unique(group1PatientID$PatientID)
