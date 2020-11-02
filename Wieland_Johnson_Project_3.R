@@ -189,14 +189,9 @@ ui <- fluidPage(navbarPage("VERITAS",
                           # # includeHTML("Patient_Report_Template.html")
                           ),
                  
-                 tabPanel("Input Data",
-
-                          tableOutput('contents'),
-                          
-                          ),
                  
                  
-                 tabPanel("Input Data",
+                 tabPanel("Upload Data",
                           h3("Upload Patient Data by File Type"),
                           fileInput("admissions", "Admission Data", accept = ".txt"),
                           fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
