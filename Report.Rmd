@@ -8,8 +8,6 @@ params:
 ```{r, echo=FALSE,warning=FALSE}
 # patient_History_Report <- "<br><p> this better work </p>"
 
-
-
 library(htmltools)
 library(rmarkdown)
 library(tinytex)
