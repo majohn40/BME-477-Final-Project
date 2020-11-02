@@ -1,5 +1,5 @@
 ---
-title: "Test_PDF_Output"
+title: "Patient EHR"
 output: html_document
 params:
   HTML_File: NA

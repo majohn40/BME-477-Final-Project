@@ -21,27 +21,28 @@ library(textreadr)
 library(stringr)
 library(utils)
 library(htmltools)
-library(Cairo)
 library(rmarkdown)
 library(tinytex)
+library(pagedown)
+library(rmarkdown)
 
 
 # library(shinysky)
 
 
 #Read in Data
-# admissions <- read_tsv("AdmissionsCorePopulatedTable.txt", col_names = TRUE)
-# diagnoses <- read_tsv("AdmissionsDiagnosesCorePopulatedTable.txt", col_names = TRUE)
-# labs <- read_tsv("LabsCorePopulatedTable.txt", col_names = TRUE)
-# corePopulated <- read_tsv("PatientCorePopulatedTable.txt", col_names = TRUE)
-# patientData <- list(corePopulated, admissions, diagnoses, labs)
-
-#Read in Data
-admissions <- read_tsv("Data_AdmissionsCorePopulatedTable_10000.txt", col_names = TRUE)
-diagnoses <- read_tsv("Data_AdmissionsDiagnosesCorePopulatedTable_10000.txt", col_names = TRUE)
-labs <- read_tsv("Data_LabsCorePopulatedTable_10000.txt", col_names = TRUE)
-corePopulated <- read_tsv("Data_PatientCorePopulatedTable_10000.txt", col_names = TRUE)
+admissions <- read_tsv("AdmissionsCorePopulatedTable.txt", col_names = TRUE)
+diagnoses <- read_tsv("AdmissionsDiagnosesCorePopulatedTable.txt", col_names = TRUE)
+labs <- read_tsv("LabsCorePopulatedTable.txt", col_names = TRUE)
+corePopulated <- read_tsv("PatientCorePopulatedTable.txt", col_names = TRUE)
 patientData <- list(corePopulated, admissions, diagnoses, labs)
+
+# #Read in Data
+# admissions <- read_tsv("Data_AdmissionsCorePopulatedTable_10000.txt", col_names = TRUE)
+# diagnoses <- read_tsv("Data_AdmissionsDiagnosesCorePopulatedTable_10000.txt", col_names = TRUE)
+# labs <- read_tsv("Data_LabsCorePopulatedTable_10000.txt", col_names = TRUE)
+# corePopulated <- read_tsv("Data_PatientCorePopulatedTable_10000.txt", col_names = TRUE)
+# patientData <- list(corePopulated, admissions, diagnoses, labs)
 
 # patientReportTemplate <- read_html("Patient_Report_Template.html", skip = 0, remove.empty = TRUE, trim = TRUE)
 patientReportTemplate <- paste(readLines("Patient_Report_Template.html"), collapse="\n")
@@ -259,7 +260,7 @@ server <- function(input, output, session) {
 
     output$downloadPatientHistoryReport <- downloadHandler(
       # filename <- paste(as.character(input$patientHistoryID), "_", Sys.Date(), ".pdf", sep=""),
-      filename <- "report.html",
+      filename <- "report.pdf",
       content <- function(file) {
 
         tempReport <- file.path(tempdir(), "Report.Rmd")
@@ -273,9 +274,10 @@ server <- function(input, output, session) {
         # Knit the document, passing in the `params` list, and eval it in a
         # child of the global environment (this isolates the code in the document
         # from the code in this app).
-        rmarkdown::render(tempReport, params = params, output_file = file,
-                          envir = new.env(parent = globalenv())
-        )
+        html<- rmarkdown::render(tempReport, params = params,
+                          envir = new.env(parent = globalenv()))
+        out <- pagedown::chrome_print(html, "test.pdf")
+        file.rename(out, file)
       }
     )
     
