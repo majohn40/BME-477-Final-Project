@@ -153,6 +153,9 @@ generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Te
 
 
 #----------------------------------------------------------------------------------------------------
+#####################################################################################################
+############################ User Design Progress ###################################################
+#####################################################################################################
 
 ui <- fluidPage(navbarPage("VERITAS",
                  tabPanel("Home",
@@ -171,9 +174,13 @@ ui <- fluidPage(navbarPage("VERITAS",
                                              multiple = TRUE, #though only 1 input, necessary to prevent autofill
                                              options = list(maxItems = 1)
                                              ),#caps to only 1 input, but does not autofill the box
-                              downloadButton("downloadPatientHistoryReport", "Download Patient History Report")
+                              downloadButton("downloadPatientHistoryReport", "Download Patient History Report"),
+                              br(""),
+                              actionButton("editPatientHistory", "Edit Patient History"),
+                              actionButton("addPatientHistory", "Add Patient Data")
                               # downloadLink("downloadPlot", "Download Plot")
                             ),
+                            
                             mainPanel(
                               htmlOutput("patientHistoryReport")
                             )
@@ -192,7 +199,8 @@ ui <- fluidPage(navbarPage("VERITAS",
                  
                  
                  
-                 tabPanel("Upload Data",
+                 tabPanel("Manage Data",
+                          
                           h3("Upload Patient Data by File Type"),
                           fileInput("admissions", "Admission Data", accept = ".txt"),
                           fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
