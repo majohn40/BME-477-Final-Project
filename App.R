@@ -51,6 +51,9 @@ patientLabReportTemplate <- paste(readLines("Patient_Report_Template_Lab_History
 #Read in reference lab results
 labReference <- read_tsv("Normal_Lab_Results.txt", col_names = TRUE)
 
+#Global Variable
+current_patient<- list();
+
 #Global Functions
 #----------------------------------------------------------------------------------------------------
 
@@ -134,6 +137,23 @@ generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Te
   return(outputHTML)
 }
 
+subsetPatientData<- function(patient_ID, patient_Data) {
+  patientCorePopulated <- subset(patient_Data[[1]], patient_Data[[1]]$PatientID == patient_ID)
+  patientAdmissions <- subset(patient_Data[[2]], patient_Data[[2]]$PatientID == patient_ID)
+  patientDiagnoses <- subset(patient_Data[[3]], patient_Data[[3]]$PatientID == patient_ID)
+  patientLab <- subset(patient_Data[[4]], patient_Data[[4]]$PatientID == patient_ID)
+  
+  patientInfoList<- list(patientCorePopulated, patientAdmissions, patientDiagnoses, patientLab)
+  
+  return(patientInfoList)
+  
+}
+
+##Define Variable Numbers for Readabiliy when indexing patient Data
+core_populated_id<- 1;
+admissions_id<-2;
+diagnoses_id<-3;
+lab_id<-4;
 #<p class=MsoNoSpacing>replace_Lab_History</p>
 
 #TROUBLESHOOTING FUNCTION HERE
@@ -221,6 +241,17 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=30*1024^2)
+  #This observe function will update a list with currently selected patient information for easy access in other functions#
+  
+  observe({
+    selected_patient <- input$patientHistoryID
+    if (is.null(selected_patient)){
+      current_patient<- vector(mode = "list", length = 0)
+    }else{
+      current_patient<- subsetPatientData(patient_ID =selected_patient, patient_Data = patientData)
+    }
+  })
+    
     # req(admissions)
     # validate(need(ext == ".txt", "Please upload a tsv file"))
     # admissions <- read_tsv(input$admissions, col_names = TRUE)
