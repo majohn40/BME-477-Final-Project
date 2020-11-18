@@ -199,7 +199,8 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
                             ),
                             tabPanel("Edit Data", value="edit_data",
-                              h3("Edit Patient Data")
+                              h3("Edit Patient Data"),
+                              h3(textOutput("patientHistoryID"))
                             )
                           )
                  ),
@@ -280,6 +281,15 @@ server <- function(input, output, session) {
         file.rename(out, file)
       }
     )
+    
+    output$patientHistoryID<-renderText({
+      if (is.null(input$patientHistoryID)) {
+        return("No Patient Selected")
+      } else {
+        return(paste("Patient ID: ", toString(input$patientHistoryID)))
+    }
+    })
+    
     
     observeEvent(input$switchToEdit, {
       updateTabsetPanel(session, "mainTabset", selected = "manage_data")
