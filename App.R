@@ -185,37 +185,29 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               htmlOutput("patientHistoryReport")
                             )
                           )
-                          # p("Pull EHR for a specific patient here:"),
-                          # selectizeInput(inputId = 'patientHistoryID',
-                          #                label = 'Search Patient ID',
-                          #                choices = patientData[[1]]$PatientID,
-                          #                selected = NULL,
-                          #                multiple = TRUE, #though only 1 input, necessary to prevent autofill
-                          #                options = list(maxItems = 1)),#caps to only 1 input, but does not autofill the box
-                          # htmlOutput("patientHistoryReport")
-                          # 
-                          # # includeHTML("Patient_Report_Template.html")
-                          ),
+                 ),
                  
                  
                  
                  tabPanel("Manage Data", value = "manage_data",
-                          
-                          h3("Upload Patient Data by File Type"),
-                          fileInput("admissions", "Admission Data", accept = ".txt"),
-                          fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
-                          fileInput("labs", "Lab Data", accept = ".txt"),
-                          fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
-                          
+                          navlistPanel(fluid=TRUE,widths = c(2, 10), id="manageDataSubpanel",
+                            tabPanel("Upload Data", value="upload_data",
+                              h3("Upload Patient Data by File Type"),
+                              fileInput("admissions", "Admission Data", accept = ".txt"),
+                              fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
+                              fileInput("labs", "Lab Data", accept = ".txt"),
+                              fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
+                            ),
+                            tabPanel("Edit Data", value="edit_data",
+                              h3("Edit Patient Data")
+                            )
+                          )
                  ),
 
                  
                  tabPanel("Analysis Tool")
                  )
 )
-
-# server <- function(input, output) {}
-
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=30*1024^2)
@@ -291,6 +283,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$switchToEdit, {
       updateTabsetPanel(session, "mainTabset", selected = "manage_data")
+      updateNavlistPanel(session, 'manageDataSubpanel', selected='edit_data')
      })
     
     # options(shiny.usecairo=T)
