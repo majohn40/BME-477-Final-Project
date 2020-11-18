@@ -157,7 +157,7 @@ generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Te
 ############################ User Design Progress ###################################################
 #####################################################################################################
 
-ui <- fluidPage(navbarPage("VERITAS",
+ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                  tabPanel("Home",
                           h3("Welcome to VERITAS"),
                           p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data"),
@@ -176,7 +176,7 @@ ui <- fluidPage(navbarPage("VERITAS",
                                              ),#caps to only 1 input, but does not autofill the box
                               downloadButton("downloadPatientHistoryReport", "Download Patient History Report"),
                               br(""),
-                              actionButton("editPatientHistory", "Edit Patient History"),
+                              actionButton("switchToEdit", "Edit Patient History"),
                               actionButton("addPatientHistory", "Add Patient Data")
                               # downloadLink("downloadPlot", "Download Plot")
                             ),
@@ -199,7 +199,7 @@ ui <- fluidPage(navbarPage("VERITAS",
                  
                  
                  
-                 tabPanel("Manage Data",
+                 tabPanel("Manage Data", value = "manage_data",
                           
                           h3("Upload Patient Data by File Type"),
                           fileInput("admissions", "Admission Data", accept = ".txt"),
@@ -288,6 +288,10 @@ server <- function(input, output, session) {
         file.rename(out, file)
       }
     )
+    
+    observeEvent(input$switchToEdit, {
+      updateTabsetPanel(session, "mainTabset", selected = "manage_data")
+     })
     
     # options(shiny.usecairo=T)
     # 
