@@ -199,8 +199,17 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
                             ),
                             tabPanel("Edit Data", value="edit_data",
-                              h3("Edit Patient Data"),
-                              h3(textOutput("patientHistoryID"))
+                              h1("Edit Patient Data"),
+                              h3(textOutput("patientHistoryID")),
+                              br(""),
+                              h3("Patient Demographic"),
+                              textInput("patient_dob", "Date of Birth: "),
+                              textInput("patient_race", "Race: "),
+                              textInput("patient_marital_status", "Marital Status: "),
+                              textInput("patient_sex", "Sex: "),
+                              textInput("patient_language", "Language: "),
+                              textInput("patient_percent_below_poverty", "Percentage Below Poverty: ")
+                              
                             )
                           )
                  ),
