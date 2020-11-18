@@ -334,6 +334,15 @@ server <- function(input, output, session) {
     observeEvent(input$switchToEdit, {
       updateTabsetPanel(session, "mainTabset", selected = "manage_data")
       updateNavlistPanel(session, 'manageDataSubpanel', selected='edit_data')
+      
+      ##Update all patient boxes to display current value to be edited
+      updateTextInput(session, "patient_dob", value = patientInfoList[[core_populated_id]]$PatientDateOfBirth)
+      updateTextInput(session, "patient_race", value = patientInfoList[[core_populated_id]]$PatientRace)
+      updateTextInput(session, "patient_marital_status", value = patientInfoList[[core_populated_id]]$PatientMaritalStatus)
+      updateTextInput(session, "patient_sex", value = patientInfoList[[core_populated_id]]$PatientGender)
+      updateTextInput(session, "patient_language", value = patientInfoList[[core_populated_id]]$PatientLanguage)
+      updateTextInput(session, "patient_percent_below_poverty", value = patientInfoList[[core_populated_id]]$PatientPopulationPercentageBelowPoverty)
+  
      })
     
     # options(shiny.usecairo=T)
