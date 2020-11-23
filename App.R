@@ -183,7 +183,7 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                           p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data"),
                           ),
                  
-                 tabPanel("Patient Data",
+                 tabPanel("Patient Data",value = "patient_data",
                           sidebarLayout(
                             sidebarPanel(
                               p("Pull EHR for a specific patient here:"),
@@ -241,14 +241,14 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=30*1024^2)
+  current_patient<-NULL
   #This observe function will update a list with currently selected patient information for easy access in other functions#
   
-  observe({
-    selected_patient <- input$patientHistoryID
-    if (is.null(selected_patient)){
-      current_patient<- vector(mode = "list", length = 0)
+  observeEvent(input$patientHistoryID, {
+    if (is.null(input$patientHistoryID)){
+      current_patient<<- NULL
     }else{
-      current_patient<- subsetPatientData(patient_ID =selected_patient, patient_Data = patientData)
+      current_patient<<- subsetPatientData(patient_ID =toString(input$patientHistoryID), patient_Data = patientData)
     }
   })
     
@@ -336,14 +336,32 @@ server <- function(input, output, session) {
       updateNavlistPanel(session, 'manageDataSubpanel', selected='edit_data')
       
       ##Update all patient boxes to display current value to be edited
-      updateTextInput(session, "patient_dob", value = patientInfoList[[core_populated_id]]$PatientDateOfBirth)
-      updateTextInput(session, "patient_race", value = patientInfoList[[core_populated_id]]$PatientRace)
-      updateTextInput(session, "patient_marital_status", value = patientInfoList[[core_populated_id]]$PatientMaritalStatus)
-      updateTextInput(session, "patient_sex", value = patientInfoList[[core_populated_id]]$PatientGender)
-      updateTextInput(session, "patient_language", value = patientInfoList[[core_populated_id]]$PatientLanguage)
-      updateTextInput(session, "patient_percent_below_poverty", value = patientInfoList[[core_populated_id]]$PatientPopulationPercentageBelowPoverty)
+      print(current_patient)
+      if(is.null(current_patient)){
+      }else{
+        updateTextInput(session, "patient_dob", value = current_patient[[core_populated_id]]$PatientDateOfBirth)
+        updateTextInput(session, "patient_race", value = current_patient[[core_populated_id]]$PatientRace)
+        updateTextInput(session, "patient_marital_status", value = current_patient[[core_populated_id]]$PatientMaritalStatus)
+        updateTextInput(session, "patient_sex", value = current_patient[[core_populated_id]]$PatientGender)
+        updateTextInput(session, "patient_language", value = current_patient[[core_populated_id]]$PatientLanguage)
+        updateTextInput(session, "patient_percent_below_poverty", value = current_patient[[core_populated_id]]$PatientPopulationPercentageBelowPoverty)
+      }
   
      })
+    
+    observeEvent(input$updatePatientDemographic, {
+     # patientInfoList[[core_populated_id]]$PatientRace <- input$patient_race
+     #patientData[[core_populated_id]]$PatientRace[[match(patientInfoList[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]] <- input$patient_race
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      
+      
+      # updateTextInput(session, "patient_race", value = patientInfoList[[core_populated_id]]$PatientRace)
+      # updateTextInput(session, "patient_marital_status", value = patientInfoList[[core_populated_id]]$PatientMaritalStatus)
+      # updateTextInput(session, "patient_sex", value = patientInfoList[[core_populated_id]]$PatientGender)
+      # updateTextInput(session, "patient_language", value = patientInfoList[[core_populated_id]]$PatientLanguage)
+      # updateTextInput(session, "patient_percent_below_poverty", value = patientInfoList[[core_populated_id]]$PatientPopulationPercentageBelowPoverty)
+      
+    })
     
     # options(shiny.usecairo=T)
     # 
