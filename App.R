@@ -228,7 +228,8 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               textInput("patient_marital_status", "Marital Status: "),
                               textInput("patient_sex", "Sex: "),
                               textInput("patient_language", "Language: "),
-                              textInput("patient_percent_below_poverty", "Percentage Below Poverty: ")
+                              textInput("patient_percent_below_poverty", "Percentage Below Poverty: "),
+                              actionButton("updatePatientDemographic", "Update Patient Demographic")
                               
                             )
                           )
@@ -298,6 +299,7 @@ server <- function(input, output, session) {
     })
     
     
+    
 
     output$downloadPatientHistoryReport <- downloadHandler(
       # filename <- paste(as.character(input$patientHistoryID), "_", Sys.Date(), ".pdf", sep=""),
@@ -350,17 +352,10 @@ server <- function(input, output, session) {
      })
     
     observeEvent(input$updatePatientDemographic, {
-     # patientInfoList[[core_populated_id]]$PatientRace <- input$patient_race
-     #patientData[[core_populated_id]]$PatientRace[[match(patientInfoList[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]] <- input$patient_race
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
-      
-      
-      # updateTextInput(session, "patient_race", value = patientInfoList[[core_populated_id]]$PatientRace)
-      # updateTextInput(session, "patient_marital_status", value = patientInfoList[[core_populated_id]]$PatientMaritalStatus)
-      # updateTextInput(session, "patient_sex", value = patientInfoList[[core_populated_id]]$PatientGender)
-      # updateTextInput(session, "patient_language", value = patientInfoList[[core_populated_id]]$PatientLanguage)
-      # updateTextInput(session, "patient_percent_below_poverty", value = patientInfoList[[core_populated_id]]$PatientPopulationPercentageBelowPoverty)
-      
+      patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<-input$patient_race
+      print(input$patient_race)
+      print(patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]])
     })
     
     # options(shiny.usecairo=T)
