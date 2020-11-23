@@ -2,6 +2,7 @@ rm(list = ls())
 
 #Install ShinySky if not loaded
 devtools::install_github("AnalytixWare/ShinySky")
+devtools::install_github("daattali/shinyjs")
 
 #Load Libraries
 
@@ -25,6 +26,8 @@ library(rmarkdown)
 library(tinytex)
 library(pagedown)
 library(rmarkdown)
+library(shinyjs)
+
 
 
 # library(shinysky)
@@ -45,11 +48,23 @@ patientData <- list(corePopulated, admissions, diagnoses, labs)
 # patientData <- list(corePopulated, admissions, diagnoses, labs)
 
 # patientReportTemplate <- read_html("Patient_Report_Template.html", skip = 0, remove.empty = TRUE, trim = TRUE)
-patientReportTemplate <- paste(readLines("Patient_Report_Template.html"), collapse="\n")
-patientLabReportTemplate <- paste(readLines("Patient_Report_Template_Lab_History_Only.html"), collapse="\n")
+#Reading in patient info report html templates
+patientReportTemplate <- paste(getwd(), "/Report_Templates/", "Patient_Report_Template.html", sep = "") %>%
+  readLines() %>% paste(collapse="", sep = "")
+# patientLabReportTemplate <- paste(getwd(), "/Report_Templates/", "Patient_Report_Template_Lab_History_Only.html", sep = "") %>%
+#   readLines() %>% paste(collapse = "", sep = "")
+patientLabReportHeaderTemplate <- paste(getwd(), "/Report_Templates/", "Lab_History_Template_Col_Names_and_Header.html", sep = "") %>%
+  readLines() %>% paste(collapse = "", sep = "")
+patientLabReportRowTemplate <- paste(getwd(), "/Report_Templates/", "Lab_History_Template_Rows.html", sep = "") %>%
+  readLines() %>% paste(collapse = "", sep = "")
 
 #Read in reference lab results
-labReference <- read_tsv("Normal_Lab_Results.txt", col_names = TRUE)
+labReference <- paste(getwd(), "/Analysis_and_Report_Tools/", "Normal_Lab_Results.txt", sep = "") %>%
+  read.csv(header = TRUE, sep = "\t")
+responseVariableList <- paste(getwd(), "/Analysis_and_Report_Tools/", "Response_Variable_List.csv", sep = "") %>%
+  read.csv(header = TRUE, sep = ",")
+conditionsNamingIndex <- paste(getwd(), "/Analysis_and_Report_Tools/", "Conditions_Naming_Index.csv", sep = "") %>%
+  read.csv(header = TRUE, sep = ",")
 
 #Global Variable
 current_patient<- list();
@@ -57,7 +72,8 @@ current_patient<- list();
 #Global Functions
 #----------------------------------------------------------------------------------------------------
 
-generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Template, lab_Reference, patient_ID, patient_Data) {
+generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Header_Template, 
+                                  patient_Lab_Report_Row_Template, lab_Reference, patient_ID, patient_Data) {
   outputHTML <- patient_Report_Template
   patientCorePopulated <- subset(patient_Data[[1]], patient_Data[[1]]$PatientID == patient_ID)
   patientAdmissions <- subset(patient_Data[[2]], patient_Data[[2]]$PatientID == patient_ID)
@@ -83,9 +99,8 @@ generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Te
     outputHTML <- str_replace(outputHTML, "replace_Diagnoses_History", diagnosesReplacementText)
   }
   outputHTML <- str_remove(outputHTML, "replace_Diagnoses_History")
-  
+    labReportHTMLReplacement <- ""
   for (i in unique(patientLab$AdmissionID)) {
-    # print(c("are we here", i))
     labAdmission <- subset(patientLab, patientLab$AdmissionID == i)
     labAdmission <- labAdmission[order(labAdmission$LabName),]
     earliestTestDate <- as.character(min(labAdmission$LabDateTime))
@@ -95,43 +110,53 @@ generateHistoryReport <- function(patient_Report_Template, patient_Lab_Report_Te
                                         "Test Period: ", earliestTestDate, " To ", latestTestDate, "<br><br>",
                                         sep = ""
                                         )
-    labNameReplacementText <- ""
-    labValueReplacementText <- ""
-    labDateReplacementText <- ""
-    labReferenceReplacementText <- ""
-    labAbnormalFlagReplacementText <- ""
     
+    labHistoryRows <- ""
     for (j in 1:nrow(labAdmission)) {
-      labNameReplacementText <- paste(labNameReplacementText, labAdmission$LabName[j], "<br>", sep = "")
-      labValueReplacementText <- paste(labValueReplacementText, labAdmission$LabValue[j], "<br>", sep = "")
-      labDateReplacementText <- paste(labDateReplacementText, labAdmission$LabDateTime[j], "<br>", sep = "")
+      
+      tempLabHistoryRows <- patient_Lab_Report_Row_Template
+      tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Lab_Name", as.character(labAdmission$LabName[j]))
+      
+      if (labAdmission$LabUnits[j] == "no unit" | labAdmission$LabUnits[j] == "NA") {
+        tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Lab_Value", as.character(labAdmission$LabValue[j]))
+      } else {
+        tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Lab_Value", 
+                                          paste(as.character(labAdmission$LabValue[j]), as.character(labAdmission$LabUnits[j]), sep = "&nbsp;"))
+      }
+
+      tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Lab_Date", as.character(labAdmission$LabDateTime[j]))
+      
       k <- which(lab_Reference$LabName == labAdmission$LabName[j])
-      labReferenceReplacementText <- paste(labReferenceReplacementText, 
-                                           lab_Reference$ReferenceLowEnd[k], " - ",
-                                           lab_Reference$ReferenceHighEnd[k], "&nbsp;",
-                                           lab_Reference$Units[k], "<br>",
-                                           sep = "")
+      if (is.na(lab_Reference$Units[k]) == TRUE) {
+        labReferenceReplacementText <- paste(lab_Reference$ReferenceLowEnd[k], " - ",
+                                             lab_Reference$ReferenceHighEnd[k], "&nbsp;",
+                                             "<br>",
+                                             sep = "")
+      } else {
+        labReferenceReplacementText <- paste(lab_Reference$ReferenceLowEnd[k], " - ",
+                                             lab_Reference$ReferenceHighEnd[k], "&nbsp;",
+                                             lab_Reference$Units[k], "<br>",
+                                             sep = "")
+      }
+
+      tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Reference_Range", labReferenceReplacementText)
       if (labAdmission$LabValue[j] >= lab_Reference$ReferenceLowEnd[k] & 
           labAdmission$LabValue[j] <= lab_Reference$ReferenceHighEnd[k]) {
         flag = ""
       } else {
         flag = "Abnormal"
       }
-      labAbnormalFlagReplacementText <- paste(labAbnormalFlagReplacementText, flag, "<br>", sep = "")
+      tempLabHistoryRows <- str_replace(tempLabHistoryRows, "replace_Abnormal_Flag", flag)
+      labHistoryRows <- paste(labHistoryRows, tempLabHistoryRows, sep = "")
     }
     
-    labReportHTMLReplacement <- patient_Lab_Report_Template
+    
+    tempLabReportHTMLReplacement <- str_replace(patient_Lab_Report_Header_Template, "replace_Lab_History_Row", labHistoryRows)
+    labReportHTMLReplacement <- paste(labReportHTMLReplacement, tempLabReportHTMLReplacement, "<br><br>", sep = "")
     labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Admission_History", labAdmissionReplacementText)
-    labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Lab_Name", labNameReplacementText)
-    labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Lab_Value", labValueReplacementText)
-    labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Lab_Date", labDateReplacementText)
-    labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Reference_Range", labReferenceReplacementText)
-    labReportHTMLReplacement <- str_replace(labReportHTMLReplacement, "replace_Abnormal_Flag", labAbnormalFlagReplacementText)
-    
-    outputHTML <- str_replace(outputHTML, "<p class=MsoNoSpacing>replace_Lab_History</p>", labReportHTMLReplacement)
-    
   }
-    
+  
+  outputHTML <- str_replace(outputHTML, "<p class=MsoNoSpacing>replace_Lab_History</p>", labReportHTMLReplacement)
   outputHTML <- str_remove(outputHTML, "replace_Lab_History")
   
   return(outputHTML)
@@ -154,6 +179,33 @@ core_populated_id<- 1;
 admissions_id<-2;
 diagnoses_id<-3;
 lab_id<-4;
+
+
+singleSelectizeInput <- function(inputID, label, choices) {
+  selectizeInput(inputId = inputID,
+                 label = label,
+                 choices = choices,
+                 selected = NULL,
+                 multiple = TRUE, #though only 1 input, necessary to prevent autofill
+                 options = list(maxItems = 1)
+  )#caps to only 1 input, but does not autofill the box   
+}
+
+multipleSelectizeInput <- function(inputID, label, choices) {
+  selectizeInput(inputId = inputID,
+                 label = label,
+                 choices = choices,
+                 selected = NULL,
+                 multiple = TRUE
+  ) 
+}
+
+displayMultGroupCondSelec <- function(numGroups) {
+  group1CondSelec <- selectizeInput()
+}
+
+
+
 #<p class=MsoNoSpacing>replace_Lab_History</p>
 
 #TROUBLESHOOTING FUNCTION HERE
@@ -236,9 +288,41 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                  ),
 
                  
-                 tabPanel("Analysis Tool")
-                 )
-)
+                 tabPanel("Analysis Tool",
+                          useShinyjs(),
+                          sidebarLayout(
+                            sidebarPanel(
+                              p("Variable Selection and Conditions",
+                                fluidRow(
+                                  column(9, offset = 0,
+                                         singleSelectizeInput("responseVariable", "Response Variable (select first)", responseVariableList$All_Response_Var)
+                                         )
+                                  
+                                ),
+                                fluidRow(
+                                  column(9, offset = 0,
+                                         singleSelectizeInput("indVariable", "Independent Variable (if applicable)", responseVariableList$Cont_Response_Var)
+                                  )
+                                ),
+                                fluidRow(
+                                  column(9, offset = 0,
+                                         selectizeInput("numGroups", "Number of Groups", c(1,2,3,4,5), selected = 1, multiple = FALSE)
+                                  )
+                                ),
+                                fluidRow(
+                                  column(9, offset = 0,
+                                         selectizeInput("numGroups", "Number of Groups", c(1,2,3,4,5), selected = 1, multiple = FALSE)
+                                  )
+                                )
+                                )
+                            ),
+                            mainPanel(
+                              p("Mainpanel 1")
+                            )
+                          )
+                )
+
+))
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=30*1024^2)
@@ -291,7 +375,7 @@ server <- function(input, output, session) {
       if (is.null(input$patientHistoryID) == TRUE) {
         return(NULL)
       } else {
-        patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportTemplate, 
+        patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
                                                         labReference, input$patientHistoryID, patientData)
         return(patient_History_Report)
       }
@@ -300,17 +384,21 @@ server <- function(input, output, session) {
     
     
     
+output$downloadPatientHistoryReport <- downloadHandler(
 
-    output$downloadPatientHistoryReport <- downloadHandler(
       # filename <- paste(as.character(input$patientHistoryID), "_", Sys.Date(), ".pdf", sep=""),
       filename <- "report.pdf",
       content <- function(file) {
 
         tempReport <- file.path(tempdir(), "Report.Rmd")
         file.copy("Report.Rmd", tempReport, overwrite = TRUE)
-        
-        patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportTemplate, 
+        patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
                                                         labReference, input$patientHistoryID, patientData)
+        patient_History_Report <<- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                        labReference, input$patientHistoryID, patientData)
+        
+        # text_output <- str_remove(patient_History_Report, "</p>\n\n</div>\n\n<span style='font-size:12.0pt;font-family:\"Times New Roman\",serif'><br\nclear=all style='page-break-before:auto'>\n</span>\n\n<div class=WordSection2>\n\n<div style='border:none;border-bottom:solid windowtext 1.0pt;padding:0in 0in 1.0pt 0in'>\n\n")
+        # text_output <- str_remove(text_output, "\n\n</div>\n\n<p class=MsoNoSpacing>")
         # Set up parameters to pass to Rmd document
         params <- list(HTML_File = patient_History_Report)
 
@@ -319,7 +407,7 @@ server <- function(input, output, session) {
         # from the code in this app).
         html<- rmarkdown::render(tempReport, params = params,
                           envir = new.env(parent = globalenv()))
-        out <- pagedown::chrome_print(html,wait = 2, "test.pdf")
+        out <- pagedown::chrome_print(html, "test.pdf")
         file.rename(out, file)
       }
     )
@@ -356,6 +444,14 @@ server <- function(input, output, session) {
       patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<-input$patient_race
       print(input$patient_race)
       print(patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]])
+    })
+
+    observeEvent(input$responseVariable, {
+      if (input$responseVariable %in% responseVariableList$Cont_Response_Var == TRUE) {
+        show("indVariable")
+      } else {
+        hide("indVariable")
+      }
     })
     
     # options(shiny.usecairo=T)
