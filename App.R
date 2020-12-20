@@ -1218,9 +1218,24 @@ totalDataPresentationUI <- function(num_Groups) {
 
 
 ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
-                 tabPanel("Home",
+                 tabPanel("Home",value = "home",
                           h3("Welcome to VERITAS"),
-                          p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data"),
+                          p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data. Its functionalities are captured in three main windows: Patient Data, Manage Data, and Analysis Tool"),
+                          h4("Patient Data"),
+                          p("To get started viewing patient data on the Patient Data tab, use the \"Search Patient ID\" widget to select the patient whose data you would like to view. A report showing the patient's demographic information, clinical history, and lab result history will appear, as shown in the image below."),
+                          img(src="Patient_Display_Demo.png",height="50%", width="50%"),
+                          p("On this interface, you also have the option to download the patient report in PDF format using the \"Download Patient History Report\" button. The \"Edit Patient Data\" and \"Add Patient Data\" buttons link out to the second major tab, the \"Manage Data Tab\"."),
+                          h4("Manage Data"),
+                          p("This tab allows the user to add patient data or edit patient information based on the currently selected PatientID in the \"Patient Data\" tab." ),
+                          h5("Add Data"),
+                          p("The first option availabe to users is to \"Add Data\". The user can add either an admission record, detailing a patient's clinical visit, or a lab record, which lists labs run and the results."),
+                          img(src="Add_Lab_Report.png", height="50%", width="50%"),
+                          img(src="Add_Visit_Record.png", height="50%", width="50%"),
+                          p("When adding lab records, the list of test options is prepolulated for user convenience"),
+                          h5("Edit Data"),
+                          p("This tab allows the user to update any incorrect patient metadata, particularly demographic data. When the user selects the update button after making the desired changes, the app will return to the Patient Display and will reflect the changes after a moment."),
+                          img(src="Edit_Patient_Data.png", height="50%", width="50%"),
+                          h4("Analysis Tool")
                           ),
                  
                  tabPanel("Patient Data",value = "patient_data",
