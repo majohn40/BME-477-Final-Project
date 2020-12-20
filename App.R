@@ -1236,7 +1236,7 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                              ),#caps to only 1 input, but does not autofill the box
                               downloadButton("downloadPatientHistoryReport", "Download Patient History Report"),
                               br(""),
-                              actionButton("switchToEdit", "Edit Patient History"),
+                              actionButton("switchToEdit", "Edit Patient Data"),
                               actionButton("addPatientHistory", "Add Patient Data")
                               # downloadLink("downloadPlot", "Download Plot")
                             ),
@@ -1270,6 +1270,19 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               textInput("patient_percent_below_poverty", "Percentage Below Poverty: "),
                               actionButton("updatePatientDemographic", "Update Patient Demographic")
                               
+                            ),
+                            tabPanel("Add Data", value="add_data",
+                              navlistPanel(fluid=TRUE, widths=c(2,10), id="addDataSubpanel",
+                                tabPanel("Add Admission Record", value="add_admission",
+                                  h1("Add Visit Record"),
+                                  dateInput("visit_start_date", "Admission Date: "),
+                                  dateInput("visit_end_date", "Release Date: "),
+                                  textInput("visit_diagnosis_code", "Primary Diagnosis Code: "),
+                                  textInput("visit_descriptioin", "Description: "),
+                                  actionButton("addVisitLog", "Add Visit Record")
+                                )
+                              )
+                            
                             )
                           )
                  ),
@@ -1435,6 +1448,11 @@ output$downloadPatientHistoryReport <- downloadHandler(
       }
   
      })
+    
+    observeEvent(input$addPatientHistory, {
+      updateTabsetPanel(session, "mainTabset", selected="manage_data")
+      updateNavlistPanel(session, 'manageDataSubpanel', selected='add_data')
+    })
     
     observeEvent(input$updatePatientDemographic, {
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
