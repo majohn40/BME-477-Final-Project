@@ -1436,6 +1436,17 @@ output$downloadPatientHistoryReport <- downloadHandler(
       patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<-input$patient_race
       print(input$patient_race)
       print(patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]])
+      
+      output$patientHistoryReport <<- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
     })
 
     observeEvent(
