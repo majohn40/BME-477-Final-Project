@@ -1180,10 +1180,10 @@ extractLinearNonLabComparisonChildren <- function(data_set, ind_Variable, respon
 # subsetDataFrames <- listSubsettedDataFrames(patientData, "CBC: HEMOGLOBIN", 2, condSel, testList7, responseVariableList, condNamingIndexTempl)
 
 
-consolGroupDatSet <- consolidateGroupDataSets(2, subsetDataFrames, "CBC: HEMOGLOBIN", "CBC: HEMOGLOBIN", responseVariableList, patientData)
+#consolGroupDatSet <- consolidateGroupDataSets(2, subsetDataFrames, "CBC: HEMOGLOBIN", "CBC: HEMOGLOBIN", responseVariableList, patientData)
 
 
-view(testDataFrame)
+#view(testDataFrame)
 #<p class=MsoNoSpacing>replace_Lab_History</p>
 
 #TROUBLESHOOTING FUNCTION HERE
@@ -1284,33 +1284,9 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               textInput("patient_language", "Language: "),
                               textInput("patient_percent_below_poverty", "Percentage Below Poverty: "),
                               actionButton("updatePatientDemographic", "Update Patient Demographic")
-                              
-                            ),
-                            tabPanel("Add Data", value="add_data",
-                              navlistPanel(fluid=TRUE, widths=c(2,10), id="addDataSubpanel",
-                                tabPanel("Add Admission Record", value="add_admission",
-                                  h1("Add Visit Record"),
-                                  dateInput("visit_start_date", "Admission Date: "),
-                                  dateInput("visit_end_date", "Release Date: "),
-                                  textInput("visit_diagnosis_code", "Primary Diagnosis Code: "),
-                                  textInput("visit_description", "Description: "),
-                                  actionButton("addVisitLog", "Add Visit Record")
-                                ),
-                                tabPanel("Add Lab Record", value="add_lab_record",
-                                  h1("Add Lab Record"),
-                                  selectInput("lab_name", "Lab Name: ", choices=c("CBC: HEMATOCRIT", "METABOLIC: ANION GAP","CBC: LYMPHOCYTES","CBC: HEMOGLOBIN", "METABOLIC: SODIUM","METABOLIC: ALBUMIN","METABOLIC: BUN","CBC: NEUTROPHILS","METABOLIC: CALCIUM","METABOLIC: GLUCOSE","URINALYSIS: PH", "METABOLIC: BILI TOTAL"
-                                  , "METABOLIC: POTASSIUM","URINALYSIS: RED BLOOD CELLS","METABOLIC: CARBON DIOXIDE","METABOLIC: CREATININE","URINALYSIS: SPECIFIC GRAVITY","CBC: MEAN CORPUSCULAR VOLUME","METABOLIC: CHLORIDE","METABOLIC: ALT/SGPT","METABOLIC: AST/SGOT","METABOLIC: ALK PHOS","CBC: EOSINOPHILS","CBC: ABSOLUTE NEUTROPHILS"," CBC: MCH", "URINALYSIS: WHITE BLOOD CELLS",
-                                  "CBC: ABSOLUTE LYMPHOCYTES","CBC: PLATELET COUNT","CBC: RED BLOOD CELL COUNT","CBC: WHITE BLOOD CELL COUNT","CBC: RDW","CBC: MCHC","CBC: MONOCYTES","METABOLIC: TOTAL PROTEIN","CBC: BASOPHILS")),
-                                  textInput("lab_value", "Lab Value: "),
-                                  textInput("lab_units", "Lab Units: "),
-                                  dateInput("lab_date", "Lab Date: "),
-                                  actionButton("addLabVisit", "Add Lab Record")
-                                )
-                              )
-                            
                             )
                           )
-                 ),
+                    ),
 
                  
                  tabPanel("Analysis Tool",
@@ -1338,8 +1314,11 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                   
                                 ),
                                 uiOutput("groupConditionsWidgets"),
-                                actionButton("executeButton", "Execute")
+                                actionButton("executeButton", "Execute"),
+                                actionButton("helpButton", "Help")
+
                                 )
+
                             ),
                             mainPanel(
                               h1("Display Results"),
@@ -1562,6 +1541,11 @@ output$downloadPatientHistoryReport <- downloadHandler(
     #     hide("indVariable")
     #   }
     # })
+
+    observeEvent(input$helpButton, {
+      updateTabsetPanel(session, "mainTabset", selected = "home")
+      
+    })
     
     observeEvent(input$addLabVisit, {
       current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
