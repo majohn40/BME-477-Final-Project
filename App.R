@@ -1452,6 +1452,9 @@ output$downloadPatientHistoryReport <- downloadHandler(
     observeEvent(input$addPatientHistory, {
       updateTabsetPanel(session, "mainTabset", selected="manage_data")
       updateNavlistPanel(session, 'manageDataSubpanel', selected='add_data')
+      updateTextInput(session, "visit_diagnosis_code", value = "")
+      updateTextInput(session, "visit_description", value = "")
+
     })
     
     observeEvent(input$updatePatientDemographic, {
@@ -1536,11 +1539,14 @@ output$downloadPatientHistoryReport <- downloadHandler(
     # })
     
     observeEvent(input$addVisitLog, {
-      temp_admission_date<- data.frame(input$patientHistoryID, 5, input$visit_start_date, input$visit_end_date)
+      current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+      
+      temp_clinician_number<-max(current_patient[[3]]$ClinicianAdmissionID)+1
+      temp_admission_date<- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_start_date, input$visit_end_date)
       colnames(temp_admission_date)<-c("PatientID", "ClinicianAdmissionID", "AdmissionStartDate", "AdmissionEndDate")
       patientData[[2]]<<-rbind(patientData[[2]],temp_admission_date)
       
-      temp_diagnostic_date <- data.frame(input$patientHistoryID, 5, input$visit_diagnosis_code, input$visit_description)
+      temp_diagnostic_date <- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_diagnosis_code, input$visit_description)
       colnames(temp_diagnostic_date) <-c("PatientID", "ClinicianAdmissionID", "PrimaryDiagnosisCode", "PrimaryDiagnosisDescription")
       patientData[[3]]<<-rbind(patientData[[3]], temp_diagnostic_date)
       print(tail(patientData[[3]]))
