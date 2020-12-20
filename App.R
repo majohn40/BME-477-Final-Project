@@ -1263,7 +1263,6 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                               h3(textOutput("patientHistoryID")),
                               br(""),
                               h3("Patient Demographic"),
-                              textInput("patient_dob", "Date of Birth: "),
                               textInput("patient_race", "Race: "),
                               textInput("patient_marital_status", "Marital Status: "),
                               textInput("patient_sex", "Sex: "),
@@ -1440,7 +1439,11 @@ output$downloadPatientHistoryReport <- downloadHandler(
     observeEvent(input$updatePatientDemographic, {
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
       patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_race
-
+      patientData[[core_populated_id]]$PatientMaritalStatus[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_marital_status
+      patientData[[core_populated_id]]$PatientGender[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_sex
+      patientData[[core_populated_id]]$PatientLanguage[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_language
+      patientData[[core_populated_id]]$PatientPopulationPercentageBelowPoverty[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_percent_below_poverty
+      
       output$patientHistoryReport <<- renderText({
         if (is.null(input$patientHistoryID) == TRUE) {
           return(NULL)
