@@ -1419,6 +1419,12 @@ output$downloadPatientHistoryReport <- downloadHandler(
       
       ##Update all patient boxes to display current value to be edited
       print(current_patient)
+      ##Update Current Patient in case it was changed
+      if (is.null(input$patientHistoryID)){
+        current_patient<<- NULL
+      }else{
+        current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+      }
       if(is.null(current_patient)){
       }else{
         updateTextInput(session, "patient_dob", value = current_patient[[core_populated_id]]$PatientDateOfBirth)
@@ -1433,10 +1439,8 @@ output$downloadPatientHistoryReport <- downloadHandler(
     
     observeEvent(input$updatePatientDemographic, {
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
-      patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<-input$patient_race
-      print(input$patient_race)
-      print(patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]])
-      
+      patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_race
+
       output$patientHistoryReport <<- renderText({
         if (is.null(input$patientHistoryID) == TRUE) {
           return(NULL)
