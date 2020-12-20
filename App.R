@@ -1285,6 +1285,17 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                     textInput("lab_units", "Lab Units: "),
                                     dateInput("lab_date", "Lab Date: "),
                                     actionButton("addLabVisit", "Add Lab Record")
+                                  ),
+                                  tabPanel("Add Patient", value="add_patient",
+                                           h1("Add Patient"),
+                                           textInput("new_patient_id", "PatientID: "),
+                                           textInput("new_patient_gender", "Gender: "),
+                                           dateInput("new_patient_dob", "Date of Birth: "),
+                                           textInput("new_patient_race", "Race: "),
+                                           textInput("new_patient_marital_status", "Marital Status: "),
+                                           textInput("new_patient_language", "Language: "),
+                                           textInput("new_patient_poverty", "Percentage Below Poverty Line: "),
+                                           actionButton("addPatient", "Add Patient")
                                   )
                                 )
                              ),
@@ -1484,6 +1495,7 @@ output$downloadPatientHistoryReport <- downloadHandler(
       patientData[[core_populated_id]]$PatientLanguage[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_language
       patientData[[core_populated_id]]$PatientPopulationPercentageBelowPoverty[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_percent_below_poverty
       
+
       output$patientHistoryReport <<- renderText({
         if (is.null(input$patientHistoryID) == TRUE) {
           return(NULL)
@@ -1495,6 +1507,37 @@ output$downloadPatientHistoryReport <- downloadHandler(
         
       })
     })
+    
+    observeEvent(input$addPatient, {
+      updateTextInput(session,"new_patient_id", value="")
+      updateTextInput(session,"new_patient_gender", value="")
+      updateTextInput(session,"new_patient_race", value="")
+      updateTextInput(session,"new_patient_marital_status", value="")
+      updateTextInput(session,"new_patient_language", value="")
+      updateTextInput(session,"new_patient_poverty", value="")
+      temp_patient<- data.frame(input$new_patient_id, input$new_patient_gender, input$new_patient_dob, input$new_patient_race, input$new_patient_marital_status, input$new_patient_language,input$new_patient_poverty)
+      colnames(temp_patient)<-c("PatientID", "PatientGender", "PatientDateOfBirth", "PatientRace", "PatientMaritalStatus", "PatientLanguage","PatientPopulationPercentageBelowPoverty")
+      patientData[[1]]<<-rbind(patientData[[1]], temp_patient)
+      print(tail(patientData[[1]]))
+
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      updateSelectizeInput(session, "patientHistoryID", choices = patientData[[1]]$PatientID)
+      
+      
+      output$patientHistoryReport <<- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+      
+      
+    })
+                   
 
     observeEvent(
       {
@@ -1586,8 +1629,12 @@ output$downloadPatientHistoryReport <- downloadHandler(
     })
     observeEvent(input$addVisitLog, {
       current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
-      
+
       temp_clinician_number<-max(current_patient[[3]]$ClinicianAdmissionID)+1
+      if(is.infinite(temp_clinician_number)){
+        temp_clinician_number<-1
+      }
+
       temp_admission_date<- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_start_date, input$visit_end_date)
       colnames(temp_admission_date)<-c("PatientID", "ClinicianAdmissionID", "AdmissionStartDate", "AdmissionEndDate")
       patientData[[2]]<<-rbind(patientData[[2]],temp_admission_date)
