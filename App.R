@@ -1278,7 +1278,7 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                   dateInput("visit_start_date", "Admission Date: "),
                                   dateInput("visit_end_date", "Release Date: "),
                                   textInput("visit_diagnosis_code", "Primary Diagnosis Code: "),
-                                  textInput("visit_descriptioin", "Description: "),
+                                  textInput("visit_description", "Description: "),
                                   actionButton("addVisitLog", "Add Visit Record")
                                 )
                               )
@@ -1534,6 +1534,31 @@ output$downloadPatientHistoryReport <- downloadHandler(
     #     hide("indVariable")
     #   }
     # })
+    
+    observeEvent(input$addVisitLog, {
+      temp_admission_date<- data.frame(input$patientHistoryID, 5, input$visit_start_date, input$visit_end_date)
+      colnames(temp_admission_date)<-c("PatientID", "ClinicianAdmissionID", "AdmissionStartDate", "AdmissionEndDate")
+      patientData[[2]]<<-rbind(patientData[[2]],temp_admission_date)
+      
+      temp_diagnostic_date <- data.frame(input$patientHistoryID, 5, input$visit_diagnosis_code, input$visit_description)
+      colnames(temp_diagnostic_date) <-c("PatientID", "ClinicianAdmissionID", "PrimaryDiagnosisCode", "PrimaryDiagnosisDescription")
+      patientData[[3]]<<-rbind(patientData[[3]], temp_diagnostic_date)
+      print(tail(patientData[[3]]))
+      
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      
+      output$patientHistoryReport <- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+      
+    })
     
     observeEvent(input$universalCondButton, {
       if (input$universalCondButton == TRUE) {
