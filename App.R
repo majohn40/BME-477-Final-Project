@@ -1280,6 +1280,16 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                   textInput("visit_diagnosis_code", "Primary Diagnosis Code: "),
                                   textInput("visit_description", "Description: "),
                                   actionButton("addVisitLog", "Add Visit Record")
+                                ),
+                                tabPanel("Add Lab Record", value="add_lab_record",
+                                  h1("Add Lab Record"),
+                                  selectInput("lab_name", "Lab Name: ", choices=c("CBC: HEMATOCRIT", "METABOLIC: ANION GAP","CBC: LYMPHOCYTES","CBC: HEMOGLOBIN", "METABOLIC: SODIUM","METABOLIC: ALBUMIN","METABOLIC: BUN","CBC: NEUTROPHILS","METABOLIC: CALCIUM","METABOLIC: GLUCOSE","URINALYSIS: PH", "METABOLIC: BILI TOTAL"
+                                  , "METABOLIC: POTASSIUM","URINALYSIS: RED BLOOD CELLS","METABOLIC: CARBON DIOXIDE","METABOLIC: CREATININE","URINALYSIS: SPECIFIC GRAVITY","CBC: MEAN CORPUSCULAR VOLUME","METABOLIC: CHLORIDE","METABOLIC: ALT/SGPT","METABOLIC: AST/SGOT","METABOLIC: ALK PHOS","CBC: EOSINOPHILS","CBC: ABSOLUTE NEUTROPHILS"," CBC: MCH", "URINALYSIS: WHITE BLOOD CELLS",
+                                  "CBC: ABSOLUTE LYMPHOCYTES","CBC: PLATELET COUNT","CBC: RED BLOOD CELL COUNT","CBC: WHITE BLOOD CELL COUNT","CBC: RDW","CBC: MCHC","CBC: MONOCYTES","METABOLIC: TOTAL PROTEIN","CBC: BASOPHILS")),
+                                  textInput("lab_value", "Lab Value: "),
+                                  textInput("lab_units", "Lab Units: "),
+                                  dateInput("lab_date", "Lab Date: "),
+                                  actionButton("addLabVisit", "Add Lab Record")
                                 )
                               )
                             
@@ -1538,6 +1548,28 @@ output$downloadPatientHistoryReport <- downloadHandler(
     #   }
     # })
     
+    observeEvent(input$addLabVisit, {
+      current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+      temp_lab_number<-1
+      temp_lab<- data.frame(input$patientHistoryID, temp_lab_number, input$lab_name, input$lab_value, input$lab_units, input$lab_date)
+      colnames(temp_lab)<-c("PatientID", "LabAdmissionID", "LabName", "LabValue", "LabUnits", "LabDateTime")
+      patientData[[4]]<<-rbind(patientData[[4]], temp_lab)
+      print(tail(patientData[[4]]))
+      
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      
+      output$patientHistoryReport <- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+
+    })
     observeEvent(input$addVisitLog, {
       current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
       
@@ -1549,8 +1581,7 @@ output$downloadPatientHistoryReport <- downloadHandler(
       temp_diagnostic_date <- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_diagnosis_code, input$visit_description)
       colnames(temp_diagnostic_date) <-c("PatientID", "ClinicianAdmissionID", "PrimaryDiagnosisCode", "PrimaryDiagnosisDescription")
       patientData[[3]]<<-rbind(patientData[[3]], temp_diagnostic_date)
-      print(tail(patientData[[3]]))
-      
+
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
       
       output$patientHistoryReport <- renderText({
