@@ -28,6 +28,9 @@ library(pagedown)
 library(rmarkdown)
 library(shinyjs)
 library(pastecs)
+library(DT)
+library(ggplot2)
+library(mixlm)
 
 
 # library(shinysky)
@@ -409,8 +412,13 @@ generateConditionsOptions <- function(cond_Naming_Index_Templ, patient_Data) {
 
 generateCondSelectedListIndex <- function(num_Groups, selected_Uni_List, selected_Group_List, cond_Naming_Index_Templ) {
   num_Groups <- as.numeric(num_Groups)
+  
+  if (class(selected_Uni_List) == "list") {
+    selected_Uni_List <- as.character(selected_Uni_List)
+  }
+  
   print("at generateCondSelectedListIndex Function")
-  outputDataFrame <- data.frame(matrix(nrow = nrow(cond_Naming_Index_Templ), ncol = 2 + num_Groups))
+  outputDataFrame <- data.frame(matrix(nrow = nrow(cond_Naming_Index_Templ), ncol = (2 + num_Groups), NA))
   names(outputDataFrame)[1] <- "Selected_Pointer_ID_Uni_Index"
   names(outputDataFrame)[2] <- "Group_Cond_Options_Index"
   
@@ -424,8 +432,8 @@ generateCondSelectedListIndex <- function(num_Groups, selected_Uni_List, selecte
   if (length(selected_Uni_List > 0)) {
     for (j in 1:length(selected_Uni_List)) {
       print(c("at generatedCondSelectedListIndex Uni", j))
-      if (selected_Uni_List[j] %in% cond_Naming_Index_Templ[,2] == TRUE) {
-        k <- which(cond_Naming_Index_Templ[,2] == selected_Uni_List[j])
+      if ((selected_Uni_List[j]) %in% cond_Naming_Index_Templ[,2] == TRUE) {
+        k <- which(cond_Naming_Index_Templ[,2] == (selected_Uni_List[j]))
         outputDataFrame[i,1] <- k
         i = i + 1
       }
@@ -464,7 +472,7 @@ generateCondSelectedListIndex <- function(num_Groups, selected_Uni_List, selecte
   
   
   outputDataFrame <- outputDataFrame[rowSums(is.na(outputDataFrame)) != ncol(outputDataFrame), ] #Remove all rows that are completely made of NAs
-  return(outputDataFrame)
+  return(as.data.frame(outputDataFrame))
 }
 
 # testList <- generateCondSelectedListIndex(c("METABOLIC: ANION GAP", "Patient Date of Birth"), condNamingIndexTempl)
@@ -596,15 +604,17 @@ getListedInputs <- function(input, input_ID_List) { #lists all the inputs for a 
 getListedInputsChildren <- function(listed_Inputs_Index, input, input_ID_List) { #called in getListedInputs through lappy
   print(c("at getListedInputsChildren ", listed_Inputs_Index))
   outputValue <- input[[input_ID_List[[listed_Inputs_Index]]]]
+  outputValue <- as.list(outputValue) #should we add as.list here?
   return(outputValue)
 }
 
 getAllCondWidgetsListedInputs <- function(input, num_Groups, conditions_Naming_Index) { #return the condition widgets for all the groups and the Uni group
   outputList <- list()
+  print("at getAllCondWidgetsListedInputs")
   if (is.null(num_Groups) == FALSE) {
     num_Groups <- as.numeric(num_Groups)
     for (i in 1:( num_Groups + 1)) { #"+1" is to account for the Uni group
-      tempInputIDList <- conditions_Naming_Index[,i]
+      tempInputIDList <- conditions_Naming_Index[,i+1]
       outputList[[i]] <- getListedInputs(input, tempInputIDList)
     }
   }
@@ -722,41 +732,54 @@ outputGroupConditionWidgets <- function(num_Groups, output, selected_Uni_List, s
 }
 
 
-listSubsettedDataFrames <- function(patient_Data, observation_Analysis, response_Variable, ind_Variable,
-                                    num_Groups, cond_Selected_List_Index, conditions_Selected_List,
-                                    response_Variable_List, cond_Naming_Index_Templ) {
+listSubsettedDataFrames <- function(patient_Data, response_Variable, num_Groups, cond_Selected_List_Index, 
+                                    conditions_Selected_List, response_Variable_List, cond_Naming_Index_Templ) {
   print("at listSubsettedDataFrames function")
   outputDataFrameList <- list()
-  corePopulatedUpdated <- patient_Data[[1]]
-  admissionsUpdated <- patient_Data[[2]]
-  diagnosesUpdated <- patient_Data[[3]]
-  labUpdated <- patient_Data[[4]]
   
+  print(c("response_Variable", response_Variable))
   rowID <- which(response_Variable_List$All_Response_Var == response_Variable)
-  groupDataSetID <- response_Variable_List$Dataset_ID[rowID]
+  responseVariableDataSetID <- response_Variable_List$Dataset_ID[rowID]
   
-  dataSet <- patient_Data[[tempDataSetID]]
+  print(c("responseVariableDataSetID", responseVariableDataSetID))
+  
+  dataSet <- patient_Data[[responseVariableDataSetID]]
   
   #First subset entirely with regard to the universal conditions
   
-  uniDataSet <- patient_Data[[tempDataSetID]]
+  uniDataSet <- patient_Data[[responseVariableDataSetID]]
   uni_Cond_Selected_List <- na.omit(cond_Selected_List_Index[,1])
   
-  if (is.null(uni_Cond_Selected_List) == FALSE) {
+  if (length(uni_Cond_Selected_List) > 0) { #are there any non_NA elements in the Uni pointer?, if so, then we need to subset them
     uniPatientData <- patient_Data
     
     for (i in 1:length(uni_Cond_Selected_List)) {
       rowID <- uni_Cond_Selected_List[i]
       dataSetID <- cond_Naming_Index_Templ$Dataset_ID[rowID]
       
+      print(c("Uni  i", i, "rowID", rowID))
+      
       if (is.null(conditions_Selected_List[[1]][[rowID]]) == FALSE) {
         colID <- cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]
-        if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Names_Sliders[rowID]) {
-          min <- conditions_Selected_List[[1]][[rowID]][[1]]
-          max <- conditions_Selected_List[[1]][[rowID]][[2]]
-          uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], uniPatientData[[dataSetID]][[colID]] > min)
-          uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], uniPatientData[[dataSetID]][[colID]] < max)
+        print(c("Uni colID", colID, cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]))
+        if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Names_Sliders == TRUE) {
+          if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Name_Lab_Test == TRUE) {
+            min <- conditions_Selected_List[[1]][[rowID]][[1]]
+            max <- conditions_Selected_List[[1]][[rowID]][[2]]
+            print(c("Uni Slider type min", min, "max", max))
+            tempLabDataFrame <- uniPatientData[[4]]
+            tempLabDataFrame <- subset(tempLabDataFrame, tempLabDataFrame$LabName == cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]) #Excludes all patients with a single case that violates the min and max
+            tempLabDataFrame <- subset(tempLabDataFrame, (tempLabDataFrame$LabValue < min | tempLabDataFrame$LabValue > max))
+            uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], (uniPatientData[[dataSetID]]$PatientID %in% tempLabDataFrame$PatientID == FALSE))
+          } else {
+            min <- conditions_Selected_List[[1]][[rowID]][[1]]
+            max <- conditions_Selected_List[[1]][[rowID]][[2]]
+            print(c("Uni Slider type min", min, "max", max))
+            uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], uniPatientData[[dataSetID]][[colID]] > min)
+            uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], uniPatientData[[dataSetID]][[colID]] < max)
+          }
         } else {
+          print(c("Uni non_Slider type"))
           tempInclusiveList <- conditions_Selected_List[[1]][[rowID]]
           uniPatientData[[dataSetID]] <- subset(uniPatientData[[dataSetID]], uniPatientData[[dataSetID]][[colID]] %in% tempInclusiveList)
         }
@@ -766,11 +789,15 @@ listSubsettedDataFrames <- function(patient_Data, observation_Analysis, response
     uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% uniPatientData[[2]]$PatientID)
     uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% uniPatientData[[3]]$PatientID)
     uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% uniPatientData[[4]]$PatientID)
+    
+    # uniDataSetGlobalEnviro <<- uniDataSet
   }
   
   for (i in 1:num_Groups) {
     rowID <- which(response_Variable_List$All_Response_Var == response_Variable)
     groupDataSetID <- response_Variable_List$Dataset_ID[rowID]
+    groupDataSet <- patient_Data[[groupDataSetID]]
+    # groupDataSetGlobal <<- patient_Data[groupDataSetID] ##Removal
     group_Cond_Selected_List <- na.omit(cond_Selected_List_Index[,(i+2)])
     
     if (is.null(group_Cond_Selected_List) == FALSE) {
@@ -779,56 +806,384 @@ listSubsettedDataFrames <- function(patient_Data, observation_Analysis, response
       for (j in 1:length(group_Cond_Selected_List)) {
         rowID <- group_Cond_Selected_List[j]
         dataSetID <- cond_Naming_Index_Templ$Dataset_ID[rowID]
+        print(c("Group  i", i, "j", j, "rowID", rowID, "dataSetID", dataSetID, cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]))
         
-        if (is.null(conditions_Selected_List[[1]][[rowID]]) == FALSE) {
+        if (is.null(conditions_Selected_List[[i+1]][[rowID]]) == FALSE) {
           colID <- cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]
-          if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Names_Sliders[rowID]) {
-            min <- conditions_Selected_List[[1]][[rowID]][[1]]
-            max <- conditions_Selected_List[[1]][[rowID]][[2]]
-            groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], groupPatientData[[dataSetID]][[colID]] > min)
-            groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], groupPatientData[[dataSetID]][[colID]] < max)
+          if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Names_Sliders == TRUE) {
+            if (cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID] %in% cond_Naming_Index_Templ$Exact_Name_Lab_Test == TRUE) {
+              min <- conditions_Selected_List[[i+1]][[rowID]][[1]]
+              max <- conditions_Selected_List[[i+1]][[rowID]][[2]]
+              print(c("Group Slider for labs type min", min, "max", max))
+              tempLabDataFrame <- groupPatientData[[4]]
+              tempLabDataFrame <- subset(tempLabDataFrame, tempLabDataFrame$LabName == cond_Naming_Index_Templ$Exact_Conditions_Labels[rowID]) #Excludes all patients with a single case that violates the min and max
+              tempLabDataFrame <- subset(tempLabDataFrame, (tempLabDataFrame$LabValue < min | tempLabDataFrame$LabValue > max))
+              groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], (groupPatientData[[dataSetID]]$PatientID %in% tempLabDataFrame$PatientID == FALSE))
+            } else {
+              min <- conditions_Selected_List[[i+1]][[rowID]][[1]]
+              max <- conditions_Selected_List[[i+1]][[rowID]][[2]]
+              print(c("Group Slider non-lab type min", min, "max", max))
+              groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], groupPatientData[[dataSetID]][[colID]] > min)
+              groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], groupPatientData[[dataSetID]][[colID]] < max)
+            }
           } else {
-            tempInclusiveList <- conditions_Selected_List[[1]][[rowID]]
+            print(c("Group Non-Slider type"))
+            tempInclusiveList <- conditions_Selected_List[[i+1]][[rowID]]
             groupPatientData[[dataSetID]] <- subset(groupPatientData[[dataSetID]], groupPatientData[[dataSetID]][[colID]] %in% tempInclusiveList)
           }
         }
       }
-      uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% groupPatientData[[1]]$PatientID)
-      uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% groupPatientData[[2]]$PatientID)
-      uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% groupPatientData[[3]]$PatientID)
-      uniDataSet <- subset(uniDataSet, uniDataSet$PatientID %in% groupPatientData[[4]]$PatientID)
+      # groupDataSetGlobal1 <<- groupDataSet
+      groupDataSet <- subset(groupDataSet, groupDataSet$PatientID %in% groupPatientData[[1]]$PatientID)
+      # groupDataSetGlobal2 <<- groupDataSet
+      groupDataSet <- subset(groupDataSet, groupDataSet$PatientID %in% groupPatientData[[2]]$PatientID)
+      # groupDataSetGlobal3 <<- groupDataSet
+      groupDataSet <- subset(groupDataSet, groupDataSet$PatientID %in% groupPatientData[[3]]$PatientID)
+      # groupDataSetGlobal4 <<- groupDataSet
+      groupDataSet <- subset(groupDataSet, groupDataSet$PatientID %in% groupPatientData[[4]]$PatientID)
+      # groupDataSetBeforeUniGlobal <<- groupDataSet
+      
+      groupDataSet <- subset(groupDataSet, groupDataSet$PatientID %in% uniDataSet$PatientID)
+      # groupDataSetAfterUniGlobal <<- groupDataSet
+      
+      outputDataFrameList[[i]] <- groupDataSet
     }
-    
   }
-  
-  
+  return(outputDataFrameList)
 }
 
- 
+
+consolidateGroupDataSets <- function(num_Groups, subsetted_Data_Frames_List, response_Variable, ind_Variable, response_Variable_List, patient_Data) {
+  print("at consolidatedGroupDataSets function")
+  num_Groups <- as.numeric(num_Groups)
+  if (is.null(response_Variable) == FALSE) {
+    if (response_Variable %in% response_Variable_List$Discrete_Response_Var == TRUE && is.null(ind_Variable) == TRUE) { #if responseVar is discrete variable and no indVar selected
+      if (response_Variable == "Number of Patients") {
+        print("responseVar is Number of Patients")
+        outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 2))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "Number of Patients"
+        for (i in 1:num_Groups) {
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- nrow(subsetted_Data_Frames_List[[i]])
+        }
+      } else if (response_Variable == "Number of Clinican Admissions") {
+        print("responseVar is Number of Clinican Admissions")
+        outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 4))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "Number of Patients"
+        names(outputDataFrame)[3] <- "Average Number of Clinicain Admissions Per Patient"
+        names(outputDataFrame)[4] <- "Sum of All Clinician Admissions"
+        
+        for (i in 1:num_Groups) {
+          tempIDList <- unique(subsetted_Data_Frames_List[[i]]$PatientID)
+          countHits <- vector()
+          for (j in 1:length(tempIDList)) {
+            tempDataFrame1 <- subset(subsetted_Data_Frames_List[[i]], subsetted_Data_Frames_List[[i]]$PatientID == tempIDList[j])
+            countHits[[j]] <- max(tempDataFrame1$ClinicianAdmissionID)
+          }
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- length(tempIDList)
+          outputDataFrame[i,3] <- mean(countHits)
+          outputDataFrame[i,4] <- sum(countHits)
+        }
+      } else if (response_Variable == "Number of Lab Admissions") {
+        print("responseVar is Number of Lab Admissions")
+        outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 4))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "Number of Patients"
+        names(outputDataFrame)[3] <- "Average Number of Lab Admissions Per Patient"
+        names(outputDataFrame)[4] <- "Sum of All Lab Admissions"
+        
+        for (i in 1:num_Groups) {
+          tempIDList <- unique(subsetted_Data_Frames_List[[i]]$PatientID)
+          countHits <- vector()
+          for (j in 1:length(tempIDList)) {
+            tempDataFrame1 <- subset(subsetted_Data_Frames_List[[i]], subsetted_Data_Frames_List[[i]]$PatientID == tempIDList[j])
+            countHits[[j]] <- max(tempDataFrame1$LabAdmissionID)
+          }
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- length(tempIDList)
+          outputDataFrame[i,3] <- mean(countHits)
+          outputDataFrame[i,4] <- sum(countHits)
+        }
+      } else if (response_Variable == "Number of Lab Tests") {
+        print("responseVar is Number of Lab Tests")
+        outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 4))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "Number of Patients"
+        names(outputDataFrame)[3] <- "Average Number of Lab Tests Per Patient"
+        names(outputDataFrame)[4] <- "Sum of Total Number of Lab Tests Performed"
+        
+        for (i in 1:num_Groups) {
+          tempIDList <- unique(subsetted_Data_Frames_List[[i]]$PatientID)
+          countHits <- vector()
+          for (j in 1:length(tempIDList)) {
+            tempDataFrame1 <- subset(subsetted_Data_Frames_List[[i]], subsetted_Data_Frames_List[[i]]$PatientID == tempIDList[j])
+            countHits[[j]] <- nrow(tempDataFrame1)
+          }
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- length(tempIDList)
+          outputDataFrame[i,3] <- mean(countHits)
+          outputDataFrame[i,4] <- sum(countHits)
+        }
+      } else if (response_Variable == "Number of Diagnoses") {
+        print("responseVar is Number of Diagnoses")
+        outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 4))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "Number of Patients"
+        names(outputDataFrame)[3] <- "Average Number of Diagnoses Per Patient"
+        names(outputDataFrame)[4] <- "Sum of Total Number of Diagnoses for All Patients"
+        
+        for (i in 1:num_Groups) {
+          tempIDList <- unique(subsetted_Data_Frames_List[[i]]$PatientID)
+          countHits <- vector()
+          for (j in 1:length(tempIDList)) {
+            tempDataFrame1 <- subset(subsetted_Data_Frames_List[[i]], subsetted_Data_Frames_List[[i]]$PatientID == tempIDList[j])
+            countHits[[j]] <- nrow(tempDataFrame1)
+          }
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- length(tempIDList)
+          outputDataFrame[i,3] <- mean(countHits)
+          outputDataFrame[i,4] <- sum(countHits)
+        }
+      }
+    } else if (response_Variable %in% response_Variable_List$Cont_Response_Var == TRUE && is.null(ind_Variable) == TRUE) { #if responseVar is a cont variable and no indVar selected
+      outputDataFrame <- data.frame(matrix(nrow = num_Groups, ncol = 7))
+      names(outputDataFrame)[1] <- "Group ID"
+      names(outputDataFrame)[2] <- paste(response_Variable, "Min")
+      names(outputDataFrame)[3] <- paste(response_Variable, "1st Qu.")
+      names(outputDataFrame)[4] <- paste(response_Variable, "Median")
+      names(outputDataFrame)[5] <- paste(response_Variable, "Mean")
+      names(outputDataFrame)[6] <- paste(response_Variable, "3rd Qu.")
+      names(outputDataFrame)[7] <- paste(response_Variable, "Max")
+        if (response_Variable == "Patient Percentage Below Poverty") {
+          for (i in 1:num_Groups) {
+            testStat <- summary(subsetted_Data_Frames_List[[i]])
+            for (j in 1:length(testStat)) {
+              outputDataFrame[i,1] <- paste("Group", as.character(i)) 
+              outputDataFrame[i,(j+1)] <- testStat[[j]] 
+            }
+          }
+        } else if (response_Variable %in% response_Variable_List$Lab_Test_Name == TRUE) {
+          for (i in 1:num_Groups) {
+            tempDataSet <- subset(subsetted_Data_Frames_List[[i]], subsetted_Data_Frames_List[[i]]$LabName == response_Variable)
+            testStat <- summary(tempDataSet$LabValue)
+            for (j in 1:length(testStat)) {
+              outputDataFrame[i,1] <- paste("Group", as.character(i)) 
+              outputDataFrame[i,(j+1)] <- testStat[[j]] 
+            }
+          }
+        }
+      } else if (response_Variable %in% response_Variable_List$Cont_Response_Var == TRUE 
+                 && ind_Variable %in% response_Variable_List$Cont_Response_Var == TRUE) {
+        
+        outputDataFrame = data.frame(matrix(nrow = num_Groups, ncol = 11))
+        names(outputDataFrame)[1] <- "Group ID"
+        names(outputDataFrame)[2] <- "n"
+        names(outputDataFrame)[3] <- "Slope"
+        names(outputDataFrame)[4] <- "Intercept"
+        names(outputDataFrame)[5] <- "R-Value (Cor)"
+        names(outputDataFrame)[6] <- paste(ind_Variable, "Median")
+        names(outputDataFrame)[7] <- paste(ind_Variable, "Mean")
+        names(outputDataFrame)[8] <- paste(ind_Variable, "StdDev")
+        names(outputDataFrame)[9] <- paste(response_Variable, "Median")
+        names(outputDataFrame)[10] <- paste(response_Variable, "Mean")
+        names(outputDataFrame)[11] <- paste(response_Variable, "StdDev")
+        
+        if (response_Variable == "Patient Percentage Below Poverty" || ind_Variable == "Patient Percentage Below Poverty") {
+          print("about to lapply extractLinearNonLabComparisonChildren function")
+          linearCompDataFrameList <- lapply(subsetted_Data_Frames_List, extractLinearNonLabComparisonChildren, 
+                                                  ind_Variable = ind_Variable, response_Variable = response_Variable, patient_Data = patient_Data)
+        } else {
+          print("about to lapply extractLinearLabComparisonChildren function")
+          linearCompDataFrameList <- lapply(subsetted_Data_Frames_List, extractLinearLabComparisonChildren, 
+                                            ind_Variable = ind_Variable, response_Variable = response_Variable)
+        }
+          
+        for (i in 1:num_Groups) {
+          outputDataFrame[i,1] <- paste("Group", as.character(i))
+          outputDataFrame[i,2] <- nrow(linearCompDataFrameList[[i]])
+          
+          print(c("linear Analysis", i))
+          if (nrow(linearCompDataFrameList[[i]]) < 2) { #to account for situtations where there are not enough elements for a linear analysis
+            print(c("linear Analysis Rejected", i))
+            outputDataFrame[i,3] <- NA
+            outputDataFrame[i,4] <- NA
+            outputDataFrame[i,5] <- NA
+          } else {
+            print(c("linear Analysis Accepted", i))
+            testDataFrame <<- linearCompDataFrameList[[i]]
+            linearAnalysis <- lm(linearCompDataFrameList[[i]][[response_Variable]] ~ linearCompDataFrameList[[i]][[ind_Variable]])
+            outputDataFrame[i,3] <- linearAnalysis[[1]][[2]] #slope
+            outputDataFrame[i,4] <- linearAnalysis[[1]][[1]] #intercept
+            outputDataFrame[i,5] <- cor(x = linearCompDataFrameList[[i]][[ind_Variable]], y = linearCompDataFrameList[[i]][[response_Variable]], use="complete.obs") #Corr
+          }
+          
+          print(c("indVariable Analysis", i))
+          indVariableAnalysis <- summary(linearCompDataFrameList[[i]][[ind_Variable]])
+          print(c("responseVariable Analysis", i))
+          responseVariableAnalysis <- summary(linearCompDataFrameList[[i]][[response_Variable]])
+          
+          outputDataFrame[i,6] <- indVariableAnalysis[[3]]
+          outputDataFrame[i,7] <- indVariableAnalysis[[4]]
+          outputDataFrame[i,8] <- sd(linearCompDataFrameList[[i]][[ind_Variable]], na.rm = TRUE)
+          
+          outputDataFrame[i,9] <- responseVariableAnalysis[[3]]
+          outputDataFrame[i,10] <- responseVariableAnalysis[[4]]
+          outputDataFrame[i,11] <- sd(linearCompDataFrameList[[i]][[response_Variable]], na.rm = TRUE)
+          
+
+          # for (j in 1:length(indVariableAnalysis)) {
+          #   outputDataFrame[i,4+j] <- indVariableAnalysis[[j]]
+          # }
+          # for (j in 1:length(responseVariableAnalysis)) {
+          #   outputDataFrame[i,10+j] <- responseVariableAnalysis[[j]]
+          # }
+        }
+          
+        }
+      
+  }
+  
+  return(outputDataFrame)
+}
 
 
-#TROUBLESHOOTING FUNCTION HERE
-testList1 <- list("Primary Diagnosis Code")
-testList2 <- list("Clinician Admission ID", "METABOLIC: SODIUM")
-testList3 <- list(testList1, testList2)
-condSel <- generateCondSelectedListIndex(10,c("Primary Diagnosis Code", "CBC: HEMOGLOBIN"), testList3,condNamingIndexTempl)
-condNamInd <- generateConditionsNamingIndex(10, condNamingIndexTempl)
-condOptions <- generateConditionsOptions(condNamingIndexTempl, patientData)
+extractLinearLabComparisonChildren <- function(data_set, ind_Variable, response_Variable) {
+  print("at extractLinearLabComparisonChildren")
+  tempTestDataFrame <- data.frame(matrix(nrow = 1, ncol = 4))
+  names(tempTestDataFrame)[1] <- "PatientID"
+  names(tempTestDataFrame)[2] <- "LabAdmissionID"
+  names(tempTestDataFrame)[3] <- ind_Variable
+  names(tempTestDataFrame)[4] <- response_Variable
+  
+  tempIDList <- unique(data_set$PatientID)
+  tempSubset0 <- subset(data_set, (data_set$LabName == response_Variable | data_set$LabName == ind_Variable))
+  rowShift = 1
+  
+  for (i in 1:length(tempIDList)) {
+    # print(c(i, length(tempIDList)))
+    tempSubSet1 <- subset(tempSubset0, tempSubset0$PatientID == tempIDList[i])
+    maxLabAdmissionID <- max(tempSubSet1$LabAdmissionID)
+    # print(maxLabAdmissionID)
+    for (j in 1:maxLabAdmissionID) {
+      tempSubSet2 <- subset(tempSubSet1, tempSubSet1$LabAdmissionID == j)
+      tempSubSet2 <<- subset(tempSubSet1, tempSubSet1$LabAdmissionID == j)
+      tempTestDataFrame[rowShift,1] <- tempIDList[i]
+      tempTestDataFrame[rowShift,2] <- j
+      
+      rowID1 <- which(tempSubSet2$LabName == ind_Variable)
+      tempTestDataFrame[rowShift,3] <- mean(tempSubSet2$LabValue[rowID1])
+      
+      
+      rowID2 <- which(tempSubSet2$LabName == response_Variable)
+      tempTestDataFrame[rowShift,4] <- mean(tempSubSet2$LabValue[rowID2])
+      
+      rowShift = rowShift +1
+    }
+  }
+  return(tempTestDataFrame)
+}
 
-# sliderInputModified(condNamInd[9,2], condNamingIndexTempl[9,2], as.numeric(condOptions[1,9]), as.numeric(condOptions[2,9]))
-# sliderInputDate(condNamInd[3,2], condNamingIndexTempl[3,2], (condOptions[1,3]), (condOptions[2,3]))
-# sliderInputDate(condNamInd[3,2], condNamingIndexTempl[3,2], as.Date(condOptions[1,3]), as.Date(condOptions[2,3]))
+extractLinearNonLabComparisonChildren <- function(data_set, ind_Variable, response_Variable, patient_Data) { #data_set must be inclusive of the response_Variable
+  print("at extractLinearNonLabComparisonChildren")
+  tempTestDataFrame <- data.frame(matrix(nrow = 1, ncol = 3))
+  names(tempTestDataFrame)[1] <- "PatientID"
+  names(tempTestDataFrame)[2] <- ind_Variable
+  names(tempTestDataFrame)[3] <- response_Variable
+  
+  if ((response_Variable == "Patient Percentage Below Poverty" || response_Variable == "Percentage Below Poverty") &&
+      ind_Variable != "Patient Percentage Below Poverty") {
+    tempLabs <- patient_Data[[4]]
+    tempDataFrame1 <- subset(tempLabs, tempLabs$LabName == ind_Variable)
+    patientIDList <- unique(data_set$PatientID)
+    
+    for(i in 1:length(patientIDList)) {
+      # print(c("response_Variable is percentage poverty", i, length(patientIDList)))
+      tempTestDataFrame[i,1] <- patientIDList[i]
+      
+      tempDataFrame2 <- subset(tempDataFrame1, tempDataFrame1$PatientID == patientIDList[i])
+      tempTestDataFrame[i,2] <- mean(tempDataFrame2$LabValue)
+      
+      rowID2 <- which(data_set$PatientID == patientIDList[i])
+      tempTestDataFrame[i,3] <- data_set$PatientPopulationPercentageBelowPoverty[rowID2]
+    }
+  } else if ((ind_Variable == "Patient Percentage Below Poverty" || ind_Variable == "Percentage Below Poverty") 
+             && response_Variable != "Patient Percentage Below Poverty") {
+    tempCorePopulated <- patient_Data[[1]]
+    tempDataFrame1 <- subset(data_set, data_set$LabName == response_Variable)
+    patientIDList <- unique(tempDataFrame1$PatientID)
+    
+    
+    for(i in 1:length(patientIDList)) {
+      # print(c("ind_Variable is percentage poverty", i, length(patientIDList)))
+      tempTestDataFrame[i,1] <- patientIDList[i]
+      
+      rowID1 <- which(tempCorePopulated$PatientID == patientIDList[i])
+      tempTestDataFrame[i,2] <- tempCorePopulated$PatientPopulationPercentageBelowPoverty[rowID1]
+      
+      rowID2 <- which(tempDataFrame1$PatientID == patientIDList[i])
+      tempTestDataFrame[i,3] <- mean(tempDataFrame1$LabValue[rowID2])
+    }
+  } else if (ind_Variable == "Patient Percentage Below Poverty" && response_Variable == "Patient Percentage Below Poverty") {
+    patientIDList <- unique(data_set$PatientID)
+    
+    for (i in 1:length(patientIDList)) {
+      # print(c("both Var is percentage poverty", i, length(patientIDList)))
+      tempTestDataFrame[i,1] <- patientIDList[i]
+      rowID <- which(data_set$PatientID == patientIDList[i])
+      tempTestDataFrame[i,2] <- data_set$PatientPopulationPercentageBelowPoverty[rowID]
+      tempTestDataFrame[i,3] <- data_set$PatientPopulationPercentageBelowPoverty[rowID]
+    }
+  }
+  
+  return(tempTestDataFrame)
+}
+
+
+
+
+#TROUBLESHOOTING FUNCTIONS HERE
+# testListUni <- list("Patient Gender", "CBC: HEMOGLOBIN")
+# testListUni <- c("Patient Gender", "CBC: HEMOGLOBIN")
 # 
-# as.POSIXct(condOptions[1,3],tz="UTC")
-# as.Date(condOptions[1,3], "%Y-%m-%d")
+# testList1 <- list("Primary Diagnosis Code", "Lab Date and Time")
+# testList2 <- list("Clinician Admission ID", "METABOLIC: SODIUM", "Percentage Below Poverty")
+# # testList2 <- list("Clinician Admission ID", "METABOLIC: SODIUM")
+# testList3 <- list(testList1, testList2)
 # 
-# test <- mapplyWidgetListInputGenerator("Uni", condSel, condNamInd, condOptions, condNamingIndexTempl)
-# test2 <- lapplyWidgetListInputGenerator("Uni", condSel, condNamInd, condOptions, condNamingIndexTempl)
-totWidgetList <- generateTotalWidgetList(10, condNamInd, condOptions, condNamingIndexTempl)
-outputWidList <- outputWidgetList("Uni", condSel, totWidgetList)
+# testList4 <- vector(mode = "list", length = 48)
+# testList5 <- vector(mode = "list", length = 48)
+# testList6 <- vector(mode = "list", length = 48)
+# testList4[[2]] <- list("Female", "Male") #patient gender
+# testList4[[17]] <- list(10,19) #cbc hemoglobin
+# testList5[[8]] <- list("O98.612", "C40.31", "O9A.12") #primary diagnosis code
+# testList5[[13]] <- list("1938-05-21 02:09:34", "2017-08-05 15:24:38") #lab date and time
+# testList6[[9]] <- list(5,12) #clinician admission ID
+# testList6[[18]] <- list(125,155) #metabolic sodium
+# testList6[[7]] <- list(1,20) #percentage below poverty
+# testList4 <- list(list("Male"), list(11,13)) #Uni selections
+# testList5 <- list(list("A18.7", "A22.1"), list("1938-05-21 02:09:34", "2017-08-05 15:24:38")) #Group 1 seleciton
+# testList6 <- list(list(5,12), list(130,150)) #Group 2 selection
+# testList7 <- list(testList4, testList5, testList6)
+
+# condSel <- generateCondSelectedListIndex(2,testListUni, testList3,condNamingIndexTempl)
+# condNamInd <- generateConditionsNamingIndex(2, condNamingIndexTempl)
+# condOptions <- generateConditionsOptions(condNamingIndexTempl, patientData)
+
+# totWidgetList <- generateTotalWidgetList(2, condNamInd, condOptions, condNamingIndexTempl)
+# outputWidList <- outputWidgetList("Uni", condSel, totWidgetList)
 # c("Primary Diagnosis Code", "CBC: HEMOGLOBIN")
 # groupCondWidgets <- outputGroupConditionWidgets(10, c("Primary Diagnosis Code", "CBC: HEMOGLOBIN"), testList3, condSel, totWidgetList, condNamingIndexTempl)
-groupCondPointers <- outputGroupConditionPointers(10, c("Primary Diagnosis Code", "CBC: HEMOGLOBIN"), condNamingIndexTempl)
+# groupCondPointers <- outputGroupConditionPointers(10, c("Primary Diagnosis Code", "CBC: HEMOGLOBIN"), condNamingIndexTempl)
+# subsetDataFrames <- listSubsettedDataFrames(patientData, "CBC: HEMOGLOBIN", 2, condSel, testList7, responseVariableList, condNamingIndexTempl)
+
+
+consolGroupDatSet <- consolidateGroupDataSets(2, subsetDataFrames, "CBC: HEMOGLOBIN", "CBC: HEMOGLOBIN", responseVariableList, patientData)
+
+
+view(testDataFrame)
 #<p class=MsoNoSpacing>replace_Lab_History</p>
 
 #TROUBLESHOOTING FUNCTION HERE
@@ -843,6 +1198,18 @@ groupCondPointers <- outputGroupConditionPointers(10, c("Primary Diagnosis Code"
 # for (i in unique(patientLab$AdmissionID)) {
 #   print(i)
 # }
+
+totalDataPresentationUI <- function(num_Groups) {
+  num_Groups <- as.numeric(num_Groups)
+  outputList <- list()
+  
+  for (i in 1:num_Groups) {
+    tempUIOutputID <- Total_Data_Presentation
+    
+  }
+  
+}
+
 
 #----------------------------------------------------------------------------------------------------
 #####################################################################################################
@@ -929,25 +1296,20 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                          uiOutput("Pointer_ID_Uni_UI_Output"),
                                          uiOutput("Select_Input_ID_Uni"),
                                          verbatimTextOutput("textOutputValues"),
-                                         uiOutput("numGroupsUIOutput")
+                                         uiOutput("numGroupsUIOutput"),
                                          )
                                   
                                 ),
-                                # fluidRow(
-                                #   column(10, offset = 0,
-                                #          numericInput("numGroups", 
-                                #                       ("Number of Groups"), 
-                                #                       value = 1,
-                                #                       step = 1) 
-                                #          # selectizeInput("numGroups", "Number of Groups", c(1:10), selected = 1, multiple = FALSE)
-                                #   )
-                                # ),
-                                uiOutput("groupConditionsWidgets")
-                                # uiOutput("testUIOutput")
+                                uiOutput("groupConditionsWidgets"),
+                                actionButton("executeButton", "Execute")
                                 )
                             ),
                             mainPanel(
-                              p("Mainpanel 1")
+                              h1("Display Results"),
+                              uiOutput("Select_Display_Choices_UI_Output"),
+                              DT::dataTableOutput("Summarized_Data_Presentation"),
+                              DT::dataTableOutput("Total_Data_Presentation")
+                              # checkboxGroupInput()
                             )
                           )
                 )
@@ -1098,6 +1460,30 @@ output$downloadPatientHistoryReport <- downloadHandler(
       }
     )
     
+    observeEvent(
+      {
+        c(input$observationAnalysis)
+      }, {
+        if (is.null(input$observationAnalysis) == FALSE) {
+          if (input$observationAnalysis == "Observation: Summarize Data") {
+            print("at display group checkbox for viewing data")
+            output$Select_Display_Choices_UI_Output <- 
+              renderUI(checkboxGroupInput("Select_Display_Choices", "Display Options", 
+                                          choices = list("Summarized Data Presentation", "Total Data Presentation", "Visualization"),
+                                          selected = list("Summarized Data Presentation", "Total Data Presentation", "Visualization")))
+          } else {
+            output$Select_Display_Choices_UI_Output <- 
+              renderUI(checkboxGroupInput("Select_Display_Choices", "Display Options", 
+                                          choices = list("Analysis Results", "Summarized Data Presentation", "Total Data Presentation", "Visualization"),
+                                          selected = list("Analysis Results", "Summarized Data Presentation", "Total Data Presentation", "Visualization")))
+          }
+        } else {
+          output$Select_Display_Choices_UI_Output <- renderUI(NULL)
+        }
+        
+      }
+    )
+    
     
     
     # observeEvent(
@@ -1206,14 +1592,16 @@ output$downloadPatientHistoryReport <- downloadHandler(
     )
     
     #Make this another generateCondSelectedListReactive function
-    generateCondSelectedListIndexReactive <- eventReactive(
+    generateCondSelectedListIndexReactiveTotal <- eventReactive(
       input$mainTabset, {
         if (input$mainTabset == "Analysis Tool") {
-          generateCondSelectedListIndex(
-            input$numGroups, 
-            generateConditionsNamingIndexReactive(),
-            generateConditionsOptionsReactive(),
-            condNamingIndexTempl)
+          tempSelectedGroupList <- getListedInputs(input, names(generateConditionsNamingIndexReactive())[3:(2+as.numeric(input$numGroups))])
+          tempSelectedGroupList <<- getListedInputs(input, names(generateConditionsNamingIndexReactive())[3:(2+as.numeric(input$numGroups))])
+            generateCondSelectedListIndex(
+              input$numGroups, 
+              input$Pointer_ID_Uni, 
+              tempSelectedGroupList, 
+              condNamingIndexTempl)
         }
       }
     )
@@ -1293,36 +1681,158 @@ output$downloadPatientHistoryReport <- downloadHandler(
 
     
     
+    # observeEvent(
+    #   {
+    #       c(input$Pointer_ID_Uni,
+    #       input$Pointer_ID_1,
+    #       input$Pointer_ID_2,
+    #       input$Pointer_ID_3,
+    #       input$Pointer_ID_4,
+    #       input$Pointer_ID_5,
+    #       input$Pointer_ID_6,
+    #       input$Pointer_ID_7,
+    #       input$Pointer_ID_8,
+    #       input$Pointer_ID_9,
+    #       input$Pointer_ID_10)
+    #     }, {
+    #       print("at observeEvent for outputGroupConditionWidgetsReactive")
+    #       renderWidgetList <- outputGroupConditionWidgetsReactive()
+    # 
+    #       #THERE IS A BUG WITH R, if a For loop or some other vectorized statement (e.g. lapply, mapply) is applied, these expressions do not work.
+    #       #The only solution was to hard code these groups in
+    #       output[["UI_Output_Group_1"]] <- renderUI(renderWidgetList[[1]])
+    #       output[["UI_Output_Group_2"]] <- renderUI(renderWidgetList[[2]])
+    #       output[["UI_Output_Group_3"]] <- renderUI(renderWidgetList[[3]])
+    #       output[["UI_Output_Group_4"]] <- renderUI(renderWidgetList[[4]])
+    #       output[["UI_Output_Group_5"]] <- renderUI(renderWidgetList[[5]])
+    #       output[["UI_Output_Group_6"]] <- renderUI(renderWidgetList[[6]])
+    #       output[["UI_Output_Group_7"]] <- renderUI(renderWidgetList[[7]])
+    #       output[["UI_Output_Group_8"]] <- renderUI(renderWidgetList[[8]])
+    #       output[["UI_Output_Group_9"]] <- renderUI(renderWidgetList[[9]])
+    #       output[["UI_Output_Group_10"]] <- renderUI(renderWidgetList[[10]])
+    # })
+    
+    
+    #THERE IS A BUG WITH R, if a For loop or some other vectorized statement (e.g. lapply, mapply) is applied, these expressions do not work.
+    #The only solution was to hard code these groups in
     observeEvent(
       {
-          c(input$Pointer_ID_Uni,
-          input$Pointer_ID_1,
-          input$Pointer_ID_2,
-          input$Pointer_ID_3,
-          input$Pointer_ID_4,
-          input$Pointer_ID_5,
-          input$Pointer_ID_6,
-          input$Pointer_ID_7,
-          input$Pointer_ID_8,
-          input$Pointer_ID_9,
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_1)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_1"]] <- renderUI(renderWidgetList[[1]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_2)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_2"]] <- renderUI(renderWidgetList[[2]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_3)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_3"]] <- renderUI(renderWidgetList[[3]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_4)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_4"]] <- renderUI(renderWidgetList[[4]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_5)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_5"]] <- renderUI(renderWidgetList[[5]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_6)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_6"]] <- renderUI(renderWidgetList[[6]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_7)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_7"]] <- renderUI(renderWidgetList[[7]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_8)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_8"]] <- renderUI(renderWidgetList[[8]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
+          input$Pointer_ID_9)
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_9"]] <- renderUI(renderWidgetList[[9]])
+      })
+    observeEvent(
+      {
+        c(input$Pointer_ID_Uni,
           input$Pointer_ID_10)
-        }, {
-          print("at observeEvent for outputGroupConditionWidgetsReactive")
-          renderWidgetList <- outputGroupConditionWidgetsReactive()
+      }, {
+        print("at observeEvent for outputGroupConditionWidgetsReactive")
+        renderWidgetList <- outputGroupConditionWidgetsReactive()
+        output[["UI_Output_Group_10"]] <- renderUI(renderWidgetList[[10]])
+      })
+    
+    
+    observeEvent(
+        input$executeButton, {
+        # if (input$executeButton == TRUE)
+        #   {
+          print("at observeEvent for rendering summarized_Table")
+          conditionsSelectedListIndex <- generateCondSelectedListIndexReactiveTotal()
+          conditionsSelectedListIndex <<- generateCondSelectedListIndexReactiveTotal()
+          print("is the problem here 1")
+          condSelectedList <- getAllCondWidgetsListedInputs(input, input$numGroups, generateConditionsNamingIndexReactive())
+          condSelectedList <<- getAllCondWidgetsListedInputs(input, input$numGroups, generateConditionsNamingIndexReactive())
+          
+          subsetDataFrames <- listSubsettedDataFrames(patientData, input$responseVariable, input$numGroups, 
+                                                      conditionsSelectedListIndex, condSelectedList, responseVariableList, condNamingIndexTempl)
+          subsetDataFrames <<- listSubsettedDataFrames(patientData, input$responseVariable, input$numGroups, 
+                                                      conditionsSelectedListIndex, condSelectedList, responseVariableList, condNamingIndexTempl)
+          print("is the problem here 2")
+          consolGroupDatSet <- consolidateGroupDataSets(input$numGroups, subsetDataFrames, input$responseVariable, input$indVariable, responseVariableList, patientData)
+          consolGroupDatSet <<- consolidateGroupDataSets(input$numGroups, subsetDataFrames, input$responseVariable, input$indVariable, responseVariableList, patientData)
+          print("is the problem here 3")
+          output$Summarized_Data_Presentation <- DT::renderDataTable({consolGroupDatSet})
+          print("is the problem here 4")
+          # output$Total_Data_Presentation <- DT::renderDataTable({subsetDataFrames})
+        # }
 
-          #THERE IS A BUG WITH R, if a For loop or some other vectorized statement (e.g. lapply, mapply) is applied, these expressions do not work.
-          #The only solution was to hard code these groups in
-          output[["UI_Output_Group_1"]] <- renderUI(renderWidgetList[[1]])
-          output[["UI_Output_Group_2"]] <- renderUI(renderWidgetList[[2]])
-          output[["UI_Output_Group_3"]] <- renderUI(renderWidgetList[[3]])
-          output[["UI_Output_Group_4"]] <- renderUI(renderWidgetList[[4]])
-          output[["UI_Output_Group_5"]] <- renderUI(renderWidgetList[[5]])
-          output[["UI_Output_Group_6"]] <- renderUI(renderWidgetList[[6]])
-          output[["UI_Output_Group_7"]] <- renderUI(renderWidgetList[[7]])
-          output[["UI_Output_Group_8"]] <- renderUI(renderWidgetList[[8]])
-          output[["UI_Output_Group_9"]] <- renderUI(renderWidgetList[[9]])
-          output[["UI_Output_Group_10"]] <- renderUI(renderWidgetList[[10]])
-    })
+        
+      })
 
 
     # return(output$textOutputValues <- renderText({listedVerbatimTextOutput(input, condNamInd[,2])}))
