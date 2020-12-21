@@ -1,8 +1,7 @@
 rm(list = ls())
 
 #Install ShinySky if not loaded
-devtools::install_github("AnalytixWare/ShinySky")
-devtools::install_github("daattali/shinyjs")
+#devtools::install_github("daattali/shinyjs")
 
 #Load Libraries
 
@@ -1180,10 +1179,10 @@ extractLinearNonLabComparisonChildren <- function(data_set, ind_Variable, respon
 # subsetDataFrames <- listSubsettedDataFrames(patientData, "CBC: HEMOGLOBIN", 2, condSel, testList7, responseVariableList, condNamingIndexTempl)
 
 
-consolGroupDatSet <- consolidateGroupDataSets(2, subsetDataFrames, "CBC: HEMOGLOBIN", "CBC: HEMOGLOBIN", responseVariableList, patientData)
+#consolGroupDatSet <- consolidateGroupDataSets(2, subsetDataFrames, "CBC: HEMOGLOBIN", "CBC: HEMOGLOBIN", responseVariableList, patientData)
 
 
-view(testDataFrame)
+#view(testDataFrame)
 #<p class=MsoNoSpacing>replace_Lab_History</p>
 
 #TROUBLESHOOTING FUNCTION HERE
@@ -1218,9 +1217,24 @@ totalDataPresentationUI <- function(num_Groups) {
 
 
 ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
-                 tabPanel("Home",
+                 tabPanel("Home",value = "home",
                           h3("Welcome to VERITAS"),
-                          p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data"),
+                          p("VERITAS is a web-based tool to allow clinicians easily input, access, store, and analyze patient data. Its functionalities are captured in three main windows: Patient Data, Manage Data, and Analysis Tool"),
+                          h4("Patient Data"),
+                          p("To get started viewing patient data on the Patient Data tab, use the \"Search Patient ID\" widget to select the patient whose data you would like to view. A report showing the patient's demographic information, clinical history, and lab result history will appear, as shown in the image below."),
+                          img(src="Patient_Display_Demo.png",height="50%", width="50%"),
+                          p("On this interface, you also have the option to download the patient report in PDF format using the \"Download Patient History Report\" button. The \"Edit Patient Data\" and \"Add Patient Data\" buttons link out to the second major tab, the \"Manage Data Tab\"."),
+                          h4("Manage Data"),
+                          p("This tab allows the user to add patient data or edit patient information based on the currently selected PatientID in the \"Patient Data\" tab." ),
+                          h5("Add Data"),
+                          p("The first option availabe to users is to \"Add Data\". The user can add either an admission record, detailing a patient's clinical visit, or a lab record, which lists labs run and the results."),
+                          img(src="Add_Lab_Report.png", height="50%", width="50%"),
+                          img(src="Add_Visit_Record.png", height="50%", width="50%"),
+                          p("When adding lab records, the list of test options is prepolulated for user convenience"),
+                          h5("Edit Data"),
+                          p("This tab allows the user to update any incorrect patient metadata, particularly demographic data. When the user selects the update button after making the desired changes, the app will return to the Patient Display and will reflect the changes after a moment."),
+                          img(src="Edit_Patient_Data.png", height="50%", width="50%"),
+                          h4("Analysis Tool")
                           ),
                  
                  tabPanel("Patient Data",value = "patient_data",
@@ -1236,7 +1250,7 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                              ),#caps to only 1 input, but does not autofill the box
                               downloadButton("downloadPatientHistoryReport", "Download Patient History Report"),
                               br(""),
-                              actionButton("switchToEdit", "Edit Patient History"),
+                              actionButton("switchToEdit", "Edit Patient Data"),
                               actionButton("addPatientHistory", "Add Patient Data")
                               # downloadLink("downloadPlot", "Download Plot")
                             ),
@@ -1251,29 +1265,53 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                  
                  tabPanel("Manage Data", value = "manage_data",
                           navlistPanel(fluid=TRUE,widths = c(2, 10), id="manageDataSubpanel",
-                            tabPanel("Upload Data", value="upload_data",
-                              h3("Upload Patient Data by File Type"),
-                              fileInput("admissions", "Admission Data", accept = ".txt"),
-                              fileInput("diagnoses", "Diagnostic Data", accept = ".txt"),
-                              fileInput("labs", "Lab Data", accept = ".txt"),
-                              fileInput("patients", "Patient Core Populated Data", accept = ".txt"),
-                            ),
+                             tabPanel("Add Data", value="add_data",
+                                navlistPanel(fluid=TRUE, widths=c(2,10), id="addDataSubpanel",
+                                  tabPanel("Add Admission Record", value="add_admission",
+                                    h1("Add Visit Record"),
+                                      dateInput("visit_start_date", "Admission Date: "),
+                                      dateInput("visit_end_date", "Release Date: "),
+                                      textInput("visit_diagnosis_code", "Primary Diagnosis Code: "),
+                                      textInput("visit_description", "Description: "),
+                                      actionButton("addVisitLog", "Add Visit Record")
+                                    ),
+                                  tabPanel("Add Lab Record", value="add_lab_record",
+                                    h1("Add Lab Record"),
+                                    selectInput("lab_name", "Lab Name: ", choices=c("CBC: HEMATOCRIT", "METABOLIC: ANION GAP","CBC: LYMPHOCYTES","CBC: HEMOGLOBIN", "METABOLIC: SODIUM","METABOLIC: ALBUMIN","METABOLIC: BUN","CBC: NEUTROPHILS","METABOLIC: CALCIUM","METABOLIC: GLUCOSE","URINALYSIS: PH", "METABOLIC: BILI TOTAL"
+                                                                                                                          , "METABOLIC: POTASSIUM","URINALYSIS: RED BLOOD CELLS","METABOLIC: CARBON DIOXIDE","METABOLIC: CREATININE","URINALYSIS: SPECIFIC GRAVITY","CBC: MEAN CORPUSCULAR VOLUME","METABOLIC: CHLORIDE","METABOLIC: ALT/SGPT","METABOLIC: AST/SGOT","METABOLIC: ALK PHOS","CBC: EOSINOPHILS","CBC: ABSOLUTE NEUTROPHILS"," CBC: MCH", "URINALYSIS: WHITE BLOOD CELLS",
+                                                                                                                          "CBC: ABSOLUTE LYMPHOCYTES","CBC: PLATELET COUNT","CBC: RED BLOOD CELL COUNT","CBC: WHITE BLOOD CELL COUNT","CBC: RDW","CBC: MCHC","CBC: MONOCYTES","METABOLIC: TOTAL PROTEIN","CBC: BASOPHILS")),
+                                    textInput("lab_value", "Lab Value: "),
+                                    textInput("lab_units", "Lab Units: "),
+                                    dateInput("lab_date", "Lab Date: "),
+                                    actionButton("addLabVisit", "Add Lab Record")
+                                  ),
+                                  tabPanel("Add Patient", value="add_patient",
+                                           h1("Add Patient"),
+                                           textInput("new_patient_id", "PatientID: "),
+                                           textInput("new_patient_gender", "Gender: "),
+                                           dateInput("new_patient_dob", "Date of Birth: "),
+                                           textInput("new_patient_race", "Race: "),
+                                           textInput("new_patient_marital_status", "Marital Status: "),
+                                           textInput("new_patient_language", "Language: "),
+                                           textInput("new_patient_poverty", "Percentage Below Poverty Line: "),
+                                           actionButton("addPatient", "Add Patient")
+                                  )
+                                )
+                             ),
                             tabPanel("Edit Data", value="edit_data",
                               h1("Edit Patient Data"),
                               h3(textOutput("patientHistoryID")),
                               br(""),
                               h3("Patient Demographic"),
-                              textInput("patient_dob", "Date of Birth: "),
                               textInput("patient_race", "Race: "),
                               textInput("patient_marital_status", "Marital Status: "),
                               textInput("patient_sex", "Sex: "),
                               textInput("patient_language", "Language: "),
                               textInput("patient_percent_below_poverty", "Percentage Below Poverty: "),
                               actionButton("updatePatientDemographic", "Update Patient Demographic")
-                              
                             )
                           )
-                 ),
+                    ),
 
                  
                  tabPanel("Analysis Tool",
@@ -1301,8 +1339,11 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                                   
                                 ),
                                 uiOutput("groupConditionsWidgets"),
-                                actionButton("executeButton", "Execute")
+                                actionButton("executeButton", "Execute"),
+                                actionButton("helpButton", "Help")
+
                                 )
+
                             ),
                             mainPanel(
                               h1("Display Results"),
@@ -1419,6 +1460,12 @@ output$downloadPatientHistoryReport <- downloadHandler(
       
       ##Update all patient boxes to display current value to be edited
       print(current_patient)
+      ##Update Current Patient in case it was changed
+      if (is.null(input$patientHistoryID)){
+        current_patient<<- NULL
+      }else{
+        current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+      }
       if(is.null(current_patient)){
       }else{
         updateTextInput(session, "patient_dob", value = current_patient[[core_populated_id]]$PatientDateOfBirth)
@@ -1431,12 +1478,65 @@ output$downloadPatientHistoryReport <- downloadHandler(
   
      })
     
+    observeEvent(input$addPatientHistory, {
+      updateTabsetPanel(session, "mainTabset", selected="manage_data")
+      updateNavlistPanel(session, 'manageDataSubpanel', selected='add_data')
+      updateTextInput(session, "visit_diagnosis_code", value = "")
+      updateTextInput(session, "visit_description", value = "")
+
+    })
+    
     observeEvent(input$updatePatientDemographic, {
       updateTabsetPanel(session, "mainTabset", selected = "patient_data")
-      patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<-input$patient_race
-      print(input$patient_race)
-      print(patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]])
+      patientData[[core_populated_id]]$PatientRace[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_race
+      patientData[[core_populated_id]]$PatientMaritalStatus[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_marital_status
+      patientData[[core_populated_id]]$PatientGender[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_sex
+      patientData[[core_populated_id]]$PatientLanguage[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_language
+      patientData[[core_populated_id]]$PatientPopulationPercentageBelowPoverty[[match(current_patient[[core_populated_id]]$PatientID, patientData[[core_populated_id]]$PatientID)]]<<-input$patient_percent_below_poverty
+      
+
+      output$patientHistoryReport <<- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
     })
+    
+    observeEvent(input$addPatient, {
+      updateTextInput(session,"new_patient_id", value="")
+      updateTextInput(session,"new_patient_gender", value="")
+      updateTextInput(session,"new_patient_race", value="")
+      updateTextInput(session,"new_patient_marital_status", value="")
+      updateTextInput(session,"new_patient_language", value="")
+      updateTextInput(session,"new_patient_poverty", value="")
+      temp_patient<- data.frame(input$new_patient_id, input$new_patient_gender, input$new_patient_dob, input$new_patient_race, input$new_patient_marital_status, input$new_patient_language,input$new_patient_poverty)
+      colnames(temp_patient)<-c("PatientID", "PatientGender", "PatientDateOfBirth", "PatientRace", "PatientMaritalStatus", "PatientLanguage","PatientPopulationPercentageBelowPoverty")
+      patientData[[1]]<<-rbind(patientData[[1]], temp_patient)
+      print(tail(patientData[[1]]))
+
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      updateSelectizeInput(session, "patientHistoryID", choices = patientData[[1]]$PatientID)
+      
+      
+      output$patientHistoryReport <<- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+      
+      
+    })
+                   
 
     observeEvent(
       {
@@ -1498,6 +1598,64 @@ output$downloadPatientHistoryReport <- downloadHandler(
     #     hide("indVariable")
     #   }
     # })
+
+    observeEvent(input$helpButton, {
+      updateTabsetPanel(session, "mainTabset", selected = "home")
+      
+    })
+    
+    observeEvent(input$addLabVisit, {
+      current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+      temp_lab_number<-1
+      temp_lab<- data.frame(input$patientHistoryID, temp_lab_number, input$lab_name, input$lab_value, input$lab_units, input$lab_date)
+      colnames(temp_lab)<-c("PatientID", "LabAdmissionID", "LabName", "LabValue", "LabUnits", "LabDateTime")
+      patientData[[4]]<<-rbind(patientData[[4]], temp_lab)
+      print(tail(patientData[[4]]))
+      
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      
+      output$patientHistoryReport <- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+
+    })
+    observeEvent(input$addVisitLog, {
+      current_patient<<- subsetPatientData(patient_ID = toString(input$patientHistoryID), patient_Data = patientData)
+
+      temp_clinician_number<-max(current_patient[[3]]$ClinicianAdmissionID)+1
+      if(is.infinite(temp_clinician_number)){
+        temp_clinician_number<-1
+      }
+
+      temp_admission_date<- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_start_date, input$visit_end_date)
+      colnames(temp_admission_date)<-c("PatientID", "ClinicianAdmissionID", "AdmissionStartDate", "AdmissionEndDate")
+      patientData[[2]]<<-rbind(patientData[[2]],temp_admission_date)
+      
+      temp_diagnostic_date <- data.frame(input$patientHistoryID, temp_clinician_number, input$visit_diagnosis_code, input$visit_description)
+      colnames(temp_diagnostic_date) <-c("PatientID", "ClinicianAdmissionID", "PrimaryDiagnosisCode", "PrimaryDiagnosisDescription")
+      patientData[[3]]<<-rbind(patientData[[3]], temp_diagnostic_date)
+
+      updateTabsetPanel(session, "mainTabset", selected = "patient_data")
+      
+      output$patientHistoryReport <- renderText({
+        if (is.null(input$patientHistoryID) == TRUE) {
+          return(NULL)
+        } else {
+          patient_History_Report <- generateHistoryReport(patientReportTemplate, patientLabReportHeaderTemplate, patientLabReportRowTemplate,
+                                                          labReference, input$patientHistoryID, patientData)
+          return(patient_History_Report)
+        }
+        
+      })
+      
+    })
     
     observeEvent(input$universalCondButton, {
       if (input$universalCondButton == TRUE) {
