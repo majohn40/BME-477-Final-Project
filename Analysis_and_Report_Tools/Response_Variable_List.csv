@@ -1,10 +1,10 @@
 ﻿All_Response_Var,Discrete_Response_Var,Cont_Response_Var,Dataset_ID,Lab_Test_Name
-Number of Patients,Number of Patients,Patient Percentage Below Poverty,1,CBC: HEMATOCRIT
+Number of Patients,Number of Patients,Percentage Below Poverty,1,CBC: HEMATOCRIT
 Number of Clinican Admissions,Number of Clinican Admissions,CBC: HEMATOCRIT,2,METABOLIC: ANION GAP
 Number of Lab Admissions,Number of Lab Admissions,METABOLIC: ANION GAP,4,CBC: LYMPHOCYTES
 Number of Lab Tests,Number of Lab Tests,CBC: LYMPHOCYTES,4,CBC: HEMOGLOBIN
 Number of Diagnoses,Number of Diagnoses,CBC: HEMOGLOBIN,3,METABOLIC: SODIUM
-Patient Percentage Below Poverty,NA,METABOLIC: SODIUM,1,METABOLIC: ALBUMIN
+Percentage Below Poverty,NA,METABOLIC: SODIUM,1,METABOLIC: ALBUMIN
 CBC: HEMATOCRIT,NA,METABOLIC: ALBUMIN,4,METABOLIC: BUN
 METABOLIC: ANION GAP,NA,METABOLIC: BUN,4,CBC: NEUTROPHILS
 CBC: LYMPHOCYTES,NA,CBC: NEUTROPHILS,4,METABOLIC: CALCIUM
