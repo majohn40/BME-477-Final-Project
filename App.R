@@ -1333,8 +1333,9 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                           h5("Edit Data"),
                           p("This tab allows the user to update any incorrect patient metadata, particularly demographic data. When the user selects the update button after making the desired changes, the app will return to the Patient Display and will reflect the changes after a moment."),
                           img(src="Edit_Patient_Data.png", height="50%", width="50%"),
-                          h4("Analysis Tool")
-                          ),
+                          h4("Analysis Tool"),
+                          p("The `Analysis` page allows for versatile analysis of patient data across the entire dataset. First, the user selects the Analysis they would like to run. They then select the response variable, or the variable to be analyzed. Next comes the most versatile feature of the program- the subsetting options. The first option for subsetting is the `Universal Conditions` selector. With `Universal Conditions`, users have the option to select the variable they would like to subset. Selected variables will trigger a widget to appear that allows for subsets to be specified across all groups. Similarly, the user has the ability to define groups based on specific subsets to compare. For each group, unique subset conditions can be assigned. Press the `Execute` button after all fields are filled- the program will run the requested analysis on the subsetted groups and display the results on the right of the screen.")
+                  ),
                  
                  tabPanel("Patient Data",value = "patient_data",
                           sidebarLayout(
@@ -1447,6 +1448,8 @@ ui <- fluidPage(navbarPage("VERITAS", id="mainTabset",
                             mainPanel(
                               h1("Display Results"),
                               uiOutput("Select_Display_Choices_UI_Output"),
+                              uiOutput("t_test_results"),
+                              uiOutput("oneway_results"),
                               DT::dataTableOutput("Summarized_Data_Presentation"),
                               uiOutput("Total_Data_Presentation_UI_Output"),
                               plotOutput("visualizationID")
@@ -2135,7 +2138,66 @@ output$downloadPatientHistoryReport <- downloadHandler(
           output$visualizationID <- renderPlot(outputVisual)
           # output$Total_Data_Presentation <- DT::renderDataTable({subsetDataFrames})
         # }
+          if(input$observationAnalysis == "Analysis: Student T-test"){
 
+            output$t_test_results <- renderUI({
+              lab_tests<-c("CBC: HEMATOCRIT", "METABOLIC: ANION GAP","CBC: LYMPHOCYTES","CBC: HEMOGLOBIN", "METABOLIC: SODIUM","METABOLIC: ALBUMIN","METABOLIC: BUN","CBC: NEUTROPHILS","METABOLIC: CALCIUM","METABOLIC: GLUCOSE","URINALYSIS: PH", "METABOLIC: BILI TOTAL"
+                           , "METABOLIC: POTASSIUM","URINALYSIS: RED BLOOD CELLS","METABOLIC: CARBON DIOXIDE","METABOLIC: CREATININE","URINALYSIS: SPECIFIC GRAVITY","CBC: MEAN CORPUSCULAR VOLUME","METABOLIC: CHLORIDE","METABOLIC: ALT/SGPT","METABOLIC: AST/SGOT","METABOLIC: ALK PHOS","CBC: EOSINOPHILS","CBC: ABSOLUTE NEUTROPHILS"," CBC: MCH", "URINALYSIS: WHITE BLOOD CELLS",
+                           "CBC: ABSOLUTE LYMPHOCYTES","CBC: PLATELET COUNT","CBC: RED BLOOD CELL COUNT","CBC: WHITE BLOOD CELL COUNT","CBC: RDW","CBC: MCHC","CBC: MONOCYTES","METABOLIC: TOTAL PROTEIN","CBC: BASOPHILS")
+              
+              if (input$responseVariable %in% lab_tests){
+                x <<- subset(subsetDataFrames[[1]], LabName == input$responseVariable, select="LabValue")
+                y <<- subset(subsetDataFrames[[2]], LabName == input$responseVariable, select="LabValue")
+              } else {
+                x <<- subsetDataFrames[[1]]$PatientPopulationPercentageBelowPoverty
+                y <<- subsetDataFrames[[2]]$PatientPopulationPercentageBelowPoverty
+                
+              }
+              
+              t_test_results<<- t.test(x,y)
+              #df<- t_test_results$parameter
+              #p_value<-t_test_results$p.value
+              #t_test_df<-data.frame(df, p_value)
+              #output$t_test_table<-DT::renderDataTable(t_test_df)
+              print(paste0("T Test Statistic: ", t_test_results$statistic, "    DF: ", t_test_results$parameter, "    P Value: ", t_test_results$p.value, sep="\n"))
+              })
+          }
+          if(input$observationAnalysis == "Analysis: One-way ANOVA"){
+            
+            output$t_test_results <- renderUI({
+              lab_tests<-c("CBC: HEMATOCRIT", "METABOLIC: ANION GAP","CBC: LYMPHOCYTES","CBC: HEMOGLOBIN", "METABOLIC: SODIUM","METABOLIC: ALBUMIN","METABOLIC: BUN","CBC: NEUTROPHILS","METABOLIC: CALCIUM","METABOLIC: GLUCOSE","URINALYSIS: PH", "METABOLIC: BILI TOTAL"
+                           , "METABOLIC: POTASSIUM","URINALYSIS: RED BLOOD CELLS","METABOLIC: CARBON DIOXIDE","METABOLIC: CREATININE","URINALYSIS: SPECIFIC GRAVITY","CBC: MEAN CORPUSCULAR VOLUME","METABOLIC: CHLORIDE","METABOLIC: ALT/SGPT","METABOLIC: AST/SGOT","METABOLIC: ALK PHOS","CBC: EOSINOPHILS","CBC: ABSOLUTE NEUTROPHILS"," CBC: MCH", "URINALYSIS: WHITE BLOOD CELLS",
+                           "CBC: ABSOLUTE LYMPHOCYTES","CBC: PLATELET COUNT","CBC: RED BLOOD CELL COUNT","CBC: WHITE BLOOD CELL COUNT","CBC: RDW","CBC: MCHC","CBC: MONOCYTES","METABOLIC: TOTAL PROTEIN","CBC: BASOPHILS")
+              
+              if (input$responseVariable %in% lab_tests){
+                x <<- subset(subsetDataFrames[[1]], LabName == input$responseVariable, select="LabValue")
+                xlabel<-rep(1, nrow(x))
+                y <<- subset(subsetDataFrames[[2]], LabName == input$responseVariable, select="LabValue")
+                ylabel<-rep(2, nrow(y))
+                
+                anova_data<-rbind(x,y)
+                anova_group<-c(xlabel,ylabel)
+                
+                onewaydf<-data.frame(anova_data, anova_group)
+                anova_results<- aov(LabValue ~ anova_group, data = onewaydf)
+                
+              } else {
+                x <<- subsetDataFrames[[1]]$PatientPopulationPercentageBelowPoverty
+                xlabel<<-rep(1, length(x))
+                y <<- subsetDataFrames[[2]]$PatientPopulationPercentageBelowPoverty
+                ylabel<<-rep(2, length(y))
+                
+                anova_data<<- c(x,y)
+                anova_group<<-c(xlabel,ylabel)
+                
+                onewaydf<<-data.frame(anova_data, anova_group)
+                anova_results<<- aov(anova_data ~ anova_group, data = onewaydf)
+                
+              }
+              
+              aov_table<-print(paste0("ANOVA:   ",summary(anova_results)))
+            })
+          }
         
       })
 
