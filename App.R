@@ -1,8 +1,7 @@
 rm(list = ls())
 
 #Install ShinySky if not loaded
-devtools::install_github("AnalytixWare/ShinySky")
-devtools::install_github("daattali/shinyjs")
+#devtools::install_github("daattali/shinyjs")
 
 #Load Libraries
 
