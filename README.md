@@ -41,22 +41,6 @@ To run Veritas:
 
 Detailed instructions on how to use Veritas can be found on the `Home` tab after startup
 # How Veritas Works
-
-```mermaid
-graph TB
-A[Home] --> B[Patient Data]
-B --> C[Analysis Tool]
-B --> D[Manage Data]
-D --> E(Add Data)
-D --> F(Edit Data)
-E --> G(Add Addmision Record)
-E --> H(Add Lab Record)
-E --> I(Add Patient)
-F --> J(Edit Demographic Info)
-C --> K(Select Analysis and Conditions)
-K --> L(Show Analysis)
-
-```
 Veritas contains several screens to allow users to easily navigate the various functionalities. The landing page or `Home` page has a detailed description of how to use the application with relevant screenshots to aid the new user.
 
 ## Home Page
@@ -72,4 +56,12 @@ The `Edit Data` tab gives the ability to edit core patient information, such as 
 After adding or editing each item, the app links back to the `Patient Display` tab for easy viewing of changes.
 
 ## Analysis Page
+The `Analysis` page allows for versatile analysis of patient data across the entire dataset. First, the user selects the Analysis they would like to run. They then select the response variable, or the variable to be analyzed. Next comes the most versatile feature of the program- the subsetting options. 
+
+The first option for subsetting is the `Universal Conditions` selector. With `Universal Conditions`, users have the option to select the variable they would like to subset. Selected variables will trigger a widget to appear that allows for subsets to be specified across all groups.
+
+Similarly, the user has the ability to define groups based on specific subsets to compare. For each group, unique subset conditions can be assigned.
+
+Press the `Execute` button after all fields are filled- the program will run the requested analysis on the subsetted groups and display the results on the right of the screen.
+
 
